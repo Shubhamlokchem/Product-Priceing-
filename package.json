@@ -1,0 +1,10 @@
+{
+  "name": "pricing-hub",
+  "version": "1.0.0",
+  "scripts": {
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "dev": "start cmd /k \"cd server && npm run dev\" && start cmd /k \"cd client && npm start\"",
+    "start:server": "cd server && npm run dev",
+    "start:client": "cd client && npm start"
+  }
+}
