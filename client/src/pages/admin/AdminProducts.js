@@ -124,10 +124,12 @@ export default function AdminProducts() {
  om[e.product._id] = e.price;
  });
 
- // For products with no price today, show latest price as read-only reference
+ // For products with no price today, show latest non-null price as reference
  prodRes.data.forEach(p => {
-  if (!pm[p._id] && latestMap[p._id]) {
-   pm[p._id] = { ...latestMap[p._id], isLatest: true };
+  const todayPrice = pm[p._id]?.price;
+  const latest = latestMap[p._id];
+  if ((todayPrice === null || todayPrice === '' || todayPrice === undefined) && latest?.price !== null && latest?.price !== '' && latest?.price !== undefined) {
+   pm[p._id] = { ...pm[p._id], ...latest, isLatest: true };
   }
  });
 
@@ -150,9 +152,9 @@ export default function AdminProducts() {
  }
  }, [loading]);
 
- // Price / notes change
+ // Price / notes change — clear isLatest flag when user edits
  const handlePrice = (id, field, val) =>
- setPriceMap(p => ({ ...p, [id]: { ...p[id], [field]: val } }));
+ setPriceMap(p => ({ ...p, [id]: { ...p[id], [field]: val, isLatest: false } }));
 
  // Inline product field change
  const handleEdit = (id, field, val) =>
@@ -223,7 +225,8 @@ export default function AdminProducts() {
  const toSave = products.filter(p => {
  const cur = priceMap[p._id]?.price;
  const had = origMap[p._id] != null;
- return (cur !== '' && cur !== undefined) || had;
+ const isLatest = priceMap[p._id]?.isLatest;
+ return !isLatest && ((cur !== '' && cur !== undefined) || had);
  });
  if (!toSave.length) { setSaving(false); return; }
 
