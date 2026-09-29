@@ -300,6 +300,24 @@ export default function AdminProducts() {
   downloadCSV(headers, rows, 'products.csv');
  };
 
+ const downloadSampleCSV = () => {
+  const sample = `group,make,coo,grade,purity,package,unit\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg\nACETONE,SHELL,Netherlands,,,,litre\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg`;
+  const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
+ };
+
+ // Split one CSV line, respecting "quoted, values"
+ const splitCSVLine = line => {
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+   const c = line[i];
+   if (c === '"') { if (q && line[i + 1] === '"') { cur += '"'; i++; } else q = !q; }
+   else if (c === ',' && !q) { out.push(cur); cur = ''; }
+   else cur += c;
+  }
+  out.push(cur);
+  return out.map(v => v.trim());
+ };
+
  // Parse imported CSV and detect duplicates
  const handleImportFile = e => {
   const file = e.target.files[0];
@@ -307,10 +325,11 @@ export default function AdminProducts() {
   const reader = new FileReader();
   reader.onload = ev => {
    const lines = ev.target.result.trim().split(/\r?\n/);
-   const hdrs = lines[0].split(',').map(h => h.replace(/"/g,'').trim().toLowerCase());
+   const hdrs = splitCSVLine(lines[0].replace(/^\uFEFF/, '')).map(h => h.toLowerCase());
    const rows = lines.slice(1)
+    .filter(line => line.trim())
     .map(line => {
-     const vals = line.split(',').map(v => v.replace(/"/g,'').trim());
+     const vals = splitCSVLine(line);
      return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
     })
     .filter(r => r.group);
@@ -491,10 +510,7 @@ export default function AdminProducts() {
       <div style={{ padding: '10px 14px 6px', borderBottom: '1px solid #f3f4f6' }}>
        <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>CSV</div>
        <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={() => {
-         const sample = `group,make,coo,grade,purity,package,unit\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg\nACETONE,SHELL,Netherlands,,,,litre\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg`;
-         const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
-        }} style={{ flex: 1, padding: '7px 6px', background: '#faf5ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
+        <button onClick={downloadSampleCSV} style={{ flex: 1, padding: '7px 6px', background: '#faf5ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
          ⬇ Sample
         </button>
         <button onClick={() => { importRef.current?.click(); setShowBulkDD(false); }}
@@ -642,7 +658,19 @@ export default function AdminProducts() {
   {/* Add Product Form — compact inline card */}
   {showAddForm && (
    <div style={{ marginBottom: 14, border: '1.5px solid #c7d7fa', borderRadius: 10, padding: '12px 16px', background: '#f8faff' }}>
-    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Product</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+     <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Product</div>
+     <span style={{ fontSize: 11, color: '#9ca3af' }}>Add one below, or upload many at once from a CSV file</span>
+     <div style={{ flex: 1 }} />
+     <button type="button" onClick={downloadSampleCSV}
+      style={{ padding: '5px 10px', background: '#faf5ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+      ⬇ Sample CSV
+     </button>
+     <button type="button" onClick={() => importRef.current?.click()}
+      style={{ padding: '5px 12px', background: '#0369a1', color: '#fff', border: 'none', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+      ↑ Bulk Import CSV
+     </button>
+    </div>
     <form onSubmit={submitAdd}>
      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
       {/* Group */}
