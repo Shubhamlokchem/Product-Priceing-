@@ -195,7 +195,7 @@ export default function AdminProducts() {
  const deleteProduct = async (id) => {
  if (!window.confirm('Remove this product?')) return;
  try { await api.delete(`/products/${id}`); loadData(true); }
- catch { setMsg({ type: 'error', text: 'Delete failed' }); }
+ catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Delete failed' }); }
  };
 
  // Add new product
@@ -258,15 +258,15 @@ export default function AdminProducts() {
 
  // Bulk actions on selected products
  const executeBulkAction = async (action, value) => {
-  const targets = selectedProducts.size > 0 ? [...selectedProducts] : products.map(p => p._id);
+  const targets = bulkTargets.map(p => p._id);
   if (!targets.length) { setMsg({ type: 'error', text: 'No products selected.' }); return; }
   if (action === 'delete') {
    if (!window.confirm(`Delete ${targets.length} product(s)? This cannot be undone.`)) return;
    try {
-    await Promise.all(targets.map(id => api.delete(`/products/${id}`)));
+    const { data } = await api.post('/products/bulk-delete', { ids: targets });
     setSelectedProducts(new Set()); setBulkAction(null);
-    setMsg({ type: 'success', text: `${targets.length} products deleted.` }); loadData(true);
-   } catch { setMsg({ type: 'error', text: 'Bulk delete failed.' }); }
+    setMsg({ type: 'success', text: `${data.count} products deleted.` }); loadData(true);
+   } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Bulk delete failed.' }); loadData(true); }
    return;
   }
   if (action === 'clearPrice') {
@@ -283,14 +283,10 @@ export default function AdminProducts() {
   const fieldMap = { grade: 'grade', coo: 'coo', make: 'make', purity: 'purity', unit: 'unit' };
   const field = fieldMap[action];
   try {
-   const updates = targets.map(id => {
-    const p = products.find(x => x._id === id);
-    return api.put(`/products/${id}`, { ...p, [field]: value.trim() });
-   });
-   await Promise.all(updates);
+   const { data } = await api.post('/products/bulk-update', { ids: targets, field, value: value.trim() });
    setBulkAction(null); setBulkValue('');
-   setMsg({ type: 'success', text: `${field} updated for ${targets.length} products.` }); loadData(true);
-  } catch { setMsg({ type: 'error', text: 'Bulk update failed.' }); }
+   setMsg({ type: 'success', text: `${field} updated for ${data.count} products.` }); loadData(true);
+  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Bulk update failed.' }); }
  };
 
  // Export all products as CSV
@@ -357,24 +353,27 @@ export default function AdminProducts() {
  // Upload unique products from import
  const submitImport = async () => {
   if (!importModal?.unique.length) return;
-  setImportModal(m => ({ ...m, loading: true }));
-  try {
-   let ok = 0;
-   for (const row of importModal.unique) {
+  const rows = importModal.unique;
+  const total = rows.length;
+  setImportModal(m => ({ ...m, loading: true, done: 0, total }));
+  let ok = 0, failed = 0;
+  for (const row of rows) {
+   try {
     await api.post('/products', {
      group: row.group, make: row.make||'', coo: row.coo||'',
      grade: row.grade||'', purity: row.purity||'',
      itemPackage: row.package||row.itempackage||'', unit: row.unit||'kg',
     });
     ok++;
-   }
-   setMsg({ type: 'success', text: `${ok} products imported successfully.` });
-   setImportModal(null);
-   loadData(true);
-  } catch (err) {
-   setMsg({ type: 'error', text: err.response?.data?.message || 'Import failed' });
-   setImportModal(m => ({ ...m, loading: false }));
+   } catch { failed++; }
+   const done = ok + failed;
+   setImportModal(m => (m ? { ...m, done } : m));
   }
+  setMsg(failed
+   ? { type: 'error', text: `${ok} of ${total} products imported. ${failed} failed — please check and try again.` }
+   : { type: 'success', text: `${ok} products imported successfully.` });
+  setImportModal(null);
+  loadData(true);
  };
 
  const toggleExpand = g => setExpandedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
@@ -396,6 +395,8 @@ export default function AdminProducts() {
  });
 
  const grouped = filtered.reduce((acc, p) => { if (!acc[p.group]) acc[p.group] = []; acc[p.group].push(p); return acc; }, {});
+ // Bulk actions apply to ticked products; if none ticked, to the products currently shown (respects filters/search)
+ const bulkTargets = selectedProducts.size > 0 ? products.filter(p => selectedProducts.has(p._id)) : filtered;
  const pricedCount = products.filter(p => priceMap[p._id]?.price !== '' && priceMap[p._id]?.price !== undefined).length;
  // Count groups that have at least one product selected
  const allGrouped = products.reduce((acc, p) => { if (!acc[p.group]) acc[p.group] = []; acc[p.group].push(p); return acc; }, {});
@@ -413,7 +414,7 @@ export default function AdminProducts() {
     <input type="checkbox"
      checked={selectedGroupCount === groups.length && groups.length > 0}
      ref={el => { if (el) el.indeterminate = selectedGroupCount > 0 && selectedGroupCount < groups.length; }}
-     onChange={e => setSelectedProducts(e.target.checked ? new Set(products.map(p => p._id)) : new Set())}
+     onChange={e => setSelectedProducts(e.target.checked ? new Set(filtered.map(p => p._id)) : new Set())}
      style={{ accentColor: '#1a3a6b', cursor: 'pointer', width: 15, height: 15 }} />
     <span style={{ fontSize: 12, fontWeight: 600, color: selectedProducts.size > 0 ? '#1a3a6b' : '#6b7280', whiteSpace: 'nowrap' }}>
      {selectedProducts.size > 0
@@ -492,7 +493,7 @@ export default function AdminProducts() {
      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: `1.5px solid ${showBulkDD ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: showBulkDD ? '#f0f5ff' : '#fff', cursor: 'pointer', color: showBulkDD ? '#1a3a6b' : '#6b7280', fontWeight: 600 }}>
      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
      Actions
-     {selectedProducts.size > 0 && <span style={{ background: '#1a3a6b', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{selectedProducts.size}</span>}
+     {selectedProducts.size > 0 && <span style={{ background: '#1a3a6b', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{bulkTargets.length}</span>}
     </button>
 
     {showBulkDD && (
@@ -529,7 +530,7 @@ export default function AdminProducts() {
        <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
         Bulk Actions
         <span style={{ fontSize: 10, color: '#c0c9d8', fontWeight: 400, marginLeft: 6, textTransform: 'none' }}>
-         {selectedProducts.size > 0 ? `(${selectedProducts.size} selected)` : `(all ${products.length})`}
+         {selectedProducts.size > 0 ? `(${bulkTargets.length} selected)` : `(all ${bulkTargets.length} shown)`}
         </span>
        </div>
       </div>
@@ -557,7 +558,7 @@ export default function AdminProducts() {
       ) : (
        <div style={{ padding: '6px 14px 14px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#1a3a6b', marginBottom: 8, textTransform: 'uppercase' }}>
-         Set {bulkAction} for {selectedProducts.size > 0 ? selectedProducts.size : products.length} products
+         Set {bulkAction} for {bulkTargets.length} products
         </div>
         {bulkAction === 'unit' ? (
          <select value={bulkValue} onChange={e => setBulkValue(e.target.value)}
@@ -601,7 +602,7 @@ export default function AdminProducts() {
         {importModal.duplicates.length > 0 && <> · <span style={{ color: '#dc2626', fontWeight: 600 }}>{importModal.duplicates.length} duplicate{importModal.duplicates.length > 1 ? 's' : ''} (will be skipped)</span></>}
        </div>
       </div>
-      <button onClick={() => setImportModal(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>✕</button>
+      <button onClick={() => setImportModal(null)} disabled={importModal.loading} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>✕</button>
      </div>
 
      {/* Scrollable list */}
@@ -639,14 +640,30 @@ export default function AdminProducts() {
       )}
      </div>
 
+     {/* Import progress */}
+     {importModal.loading && importModal.total > 0 && (() => {
+      const pct = Math.round((importModal.done / importModal.total) * 100);
+      return (
+       <div style={{ marginTop: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: '#1a3a6b', marginBottom: 5 }}>
+         <span>Importing… {importModal.done} / {importModal.total}</span>
+         <span>{pct}%</span>
+        </div>
+        <div style={{ height: 10, background: '#e5e7eb', borderRadius: 99, overflow: 'hidden' }}>
+         <div style={{ height: '100%', width: `${pct}%`, background: '#16a34a', borderRadius: 99, transition: 'width 0.2s' }} />
+        </div>
+       </div>
+      );
+     })()}
+
      {/* Footer buttons */}
      <div style={{ display: 'flex', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
       <button onClick={submitImport}
        disabled={importModal.loading || !importModal.unique.length}
        style={{ flex: 1, padding: '9px', background: importModal.unique.length ? '#16a34a' : '#e5e7eb', color: importModal.unique.length ? '#fff' : '#9ca3af', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: importModal.unique.length ? 'pointer' : 'default' }}>
-       {importModal.loading ? 'Importing…' : `Import ${importModal.unique.length} New Product${importModal.unique.length !== 1 ? 's' : ''}`}
+       {importModal.loading ? `Importing… ${importModal.total ? Math.round((importModal.done / importModal.total) * 100) : 0}%` : `Import ${importModal.unique.length} New Product${importModal.unique.length !== 1 ? 's' : ''}`}
       </button>
-      <button onClick={() => setImportModal(null)}
+      <button onClick={() => setImportModal(null)} disabled={importModal.loading}
        style={{ padding: '9px 20px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
        Cancel
       </button>
@@ -711,7 +728,7 @@ export default function AdminProducts() {
   )}
 
   {/* Product + Price table grouped */}
-  {loading ? <div className="spinner">Loading...</div> : (
+  {loading && products.length === 0 ? <div className="spinner">Loading...</div> : (
   Object.entries(grouped).map(([group, items]) => {
   const isOpen = expandedGroups.has(group);
   const pricedInGroup = items.filter(p => priceMap[p._id]?.price !== '' && priceMap[p._id]?.price !== undefined).length;

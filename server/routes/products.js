@@ -34,6 +34,32 @@ router.get('/groups', protect, async (req, res) => {
   }
 });
 
+// Admin: Bulk soft-delete in ONE request  → POST /products/bulk-delete { ids: [...] }
+router.post('/bulk-delete', protect, adminOnly, async (req, res) => {
+  try {
+    const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
+    if (!ids.length) return res.status(400).json({ message: 'No products selected' });
+    const r = await Product.updateMany({ _id: { $in: ids }, isActive: true }, { $set: { isActive: false } });
+    res.json({ message: `${r.modifiedCount} products deleted`, count: r.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Admin: Bulk field update in ONE request → POST /products/bulk-update { ids: [...], field, value }
+router.post('/bulk-update', protect, adminOnly, async (req, res) => {
+  try {
+    const { ids, field, value } = req.body;
+    const allowed = ['make', 'coo', 'grade', 'purity', 'itemPackage', 'unit'];
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ message: 'No products selected' });
+    if (!allowed.includes(field)) return res.status(400).json({ message: 'Invalid field' });
+    const r = await Product.updateMany({ _id: { $in: ids }, isActive: true }, { $set: { [field]: String(value ?? '').trim() } });
+    res.json({ message: `${field} updated for ${r.modifiedCount} products`, count: r.matchedCount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get single product
 router.get('/:id', protect, async (req, res) => {
   try {
