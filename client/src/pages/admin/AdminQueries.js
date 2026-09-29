@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import '../Dashboard.css';
 
-const EMPTY_FORM = { productName: '', make: '', coo: '', origin: '', grade: '', purity: '', message: '' };
+const EMPTY_FORM = { make: '', coo: '', origin: '', grade: '', purity: '', message: '' };
+const productLabel = p => [p.group, p.make, p.coo, p.grade, p.purity, p.itemPackage].filter(Boolean).join(' · ');
 
 export default function AdminQueries() {
  const [queries, setQueries] = useState([]);
@@ -15,6 +16,34 @@ export default function AdminQueries() {
  const [showForm, setShowForm] = useState(false);
  const [form, setForm] = useState(EMPTY_FORM);
  const [submitting, setSubmitting] = useState(false);
+ const [allProducts, setAllProducts] = useState([]);
+ const [picked, setPicked] = useState(new Set());      // selected existing product ids
+ const [newNames, setNewNames] = useState([]);         // typed new product names
+ const [newName, setNewName] = useState('');
+ const [showPicker, setShowPicker] = useState(false);
+ const [pickSearch, setPickSearch] = useState('');
+ const pickerRef = useRef(null);
+
+ // Load product list when the form opens
+ useEffect(() => {
+  if (showForm && !allProducts.length) api.get('/products').then(r => setAllProducts(r.data)).catch(() => {});
+ }, [showForm, allProducts.length]);
+
+ // Close picker on outside click
+ useEffect(() => {
+  const h = e => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setShowPicker(false); };
+  document.addEventListener('mousedown', h);
+  return () => document.removeEventListener('mousedown', h);
+ }, []);
+
+ const togglePick = id => setPicked(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+ const addNewName = () => {
+  const v = newName.trim();
+  if (!v) return;
+  if (!newNames.some(x => x.toLowerCase() === v.toLowerCase())) setNewNames(a => [...a, v]);
+  setNewName('');
+ };
+ const resetForm = () => { setForm(EMPTY_FORM); setPicked(new Set()); setNewNames([]); setNewName(''); setPickSearch(''); };
 
  const load = async () => {
  setLoading(true);
@@ -37,19 +66,39 @@ export default function AdminQueries() {
  finally { setSaving(false); }
  };
 
- // Admin: send a new query
+ // Admin: send one query per selected / typed product
  const submitQuery = async e => {
   e.preventDefault();
-  if (!form.productName.trim()) { setMsg({ type: 'error', text: 'Product name is required.' }); return; }
+  const typed = [...newNames, ...(newName.trim() ? [newName.trim()] : [])];
+  const existing = allProducts.filter(p => picked.has(p._id));
+  if (!existing.length && !typed.length) { setMsg({ type: 'error', text: 'Select at least one product or type a new one.' }); return; }
+  const payloads = [
+   // Existing products: details come from the product itself
+   ...existing.map(p => ({
+    productName: p.group, make: p.make || '', coo: p.coo || '', origin: form.origin,
+    grade: p.grade || '', purity: p.purity || '', message: form.message,
+   })),
+   // New products: use the Make / COO / Grade / Purity boxes
+   ...typed.map(name => ({ ...form, productName: name })),
+  ];
   setSubmitting(true); setMsg(null);
-  try {
-   await api.post('/queries', form);
-   setMsg({ type: 'success', text: 'Query sent.' });
-   setForm(EMPTY_FORM); setShowForm(false);
-   load();
-  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to send query' }); }
-  finally { setSubmitting(false); }
+  let ok = 0, failed = 0;
+  for (const body of payloads) {
+   try { await api.post('/queries', body); ok++; } catch { failed++; }
+  }
+  setSubmitting(false);
+  setMsg(failed
+   ? { type: 'error', text: `${ok} of ${payloads.length} queries sent. ${failed} failed.` }
+   : { type: 'success', text: `${ok} ${ok === 1 ? 'query' : 'queries'} sent.` });
+  if (!failed) { resetForm(); setShowForm(false); }
+  load();
  };
+
+ const pickList = allProducts.filter(p => {
+  const q = pickSearch.trim().toLowerCase();
+  return !q || productLabel(p).toLowerCase().includes(q);
+ });
+ const totalChosen = picked.size + newNames.length + (newName.trim() ? 1 : 0);
 
  const displayed = queries.filter(q => filter === 'all' || q.status === filter);
  const openCount = queries.filter(q => q.status === 'open').length;
@@ -75,7 +124,7 @@ export default function AdminQueries() {
       color: filter === val ? '#fff' : '#6b7280', transition: 'all 0.15s' }}>{label}</button>
    ))}
   </div>
-  <button onClick={() => { setShowForm(v => !v); setMsg(null); }}
+  <button onClick={() => { setShowForm(v => !v); setMsg(null); if (showForm) resetForm(); }}
    style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
     border: showForm ? '1.5px solid #fca5a5' : 'none', background: showForm ? '#fef2f2' : '#1a3a6b', color: showForm ? '#dc2626' : '#fff' }}>
    {showForm ? '✕ Cancel' : '+ New Query'}
@@ -88,19 +137,77 @@ export default function AdminQueries() {
  {showForm && (
   <form onSubmit={submitQuery} style={{ marginBottom: 14, border: '1.5px solid #c7d7fa', borderRadius: 10, padding: '12px 16px', background: '#f8faff' }}>
    <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Query</div>
-   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-    <input value={form.productName} onChange={e => setForm(f => ({ ...f, productName: e.target.value }))} placeholder="Product name *" required
+
+   {/* Row 1: pick existing products + type new products */}
+   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+    <div style={{ position: 'relative' }} ref={pickerRef}>
+     <button type="button" onClick={() => setShowPicker(v => !v)}
+      style={{ padding: '6px 12px', border: `1.5px solid ${picked.size ? '#1a3a6b' : '#c7d7fa'}`, borderRadius: 7, fontSize: 12, background: '#fff', cursor: 'pointer', color: picked.size ? '#1a3a6b' : '#6b7280', fontWeight: 600, minWidth: 220, textAlign: 'left' }}>
+      {picked.size ? `${picked.size} product${picked.size > 1 ? 's' : ''} selected` : 'Select existing products'} ▾
+     </button>
+     {showPicker && (
+      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 300, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 380 }}>
+       <div style={{ padding: 8, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6 }}>
+        <input autoFocus value={pickSearch} onChange={e => setPickSearch(e.target.value)} placeholder="Search products…"
+         style={{ flex: 1, padding: '6px 9px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12 }} />
+        {picked.size > 0 && <button type="button" onClick={() => setPicked(new Set())}
+         style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear</button>}
+       </div>
+       <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
+        {pickList.length === 0
+         ? <div style={{ padding: '10px 12px', fontSize: 12, color: '#9ca3af' }}>{allProducts.length ? 'No match — type it as a new product instead.' : 'Loading products…'}</div>
+         : pickList.map(p => (
+          <label key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: picked.has(p._id) ? '#f0f5ff' : 'transparent', color: '#374151' }}>
+           <input type="checkbox" checked={picked.has(p._id)} onChange={() => togglePick(p._id)} style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
+           {productLabel(p)}
+          </label>
+         ))}
+       </div>
+      </div>
+     )}
+    </div>
+
+    <span style={{ fontSize: 11, color: '#9ca3af' }}>or</span>
+    <input value={newName} onChange={e => setNewName(e.target.value)}
+     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewName(); } }}
+     placeholder="New product name"
      style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 180 }} />
+    <button type="button" onClick={addNewName}
+     style={{ padding: '6px 10px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 11, background: '#fff', cursor: 'pointer', color: '#1a3a6b', fontWeight: 600 }}>+ Add</button>
+   </div>
+
+   {/* Chosen products as chips */}
+   {(picked.size > 0 || newNames.length > 0) && (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+     {allProducts.filter(p => picked.has(p._id)).map(p => (
+      <span key={p._id} style={{ fontSize: 11, background: '#e0e7ff', color: '#1a3a6b', padding: '3px 8px', borderRadius: 99, fontWeight: 600 }}>
+       {productLabel(p)} <span onClick={() => togglePick(p._id)} style={{ cursor: 'pointer', marginLeft: 4, color: '#dc2626' }}>✕</span>
+      </span>
+     ))}
+     {newNames.map(n => (
+      <span key={n} style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: 99, fontWeight: 600 }}>
+       NEW: {n} <span onClick={() => setNewNames(a => a.filter(x => x !== n))} style={{ cursor: 'pointer', marginLeft: 4, color: '#dc2626' }}>✕</span>
+      </span>
+     ))}
+    </div>
+   )}
+
+   {/* Row 2: details for new products + message + send */}
+   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
     {[['make','Make'],['coo','COO'],['origin','Origin'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
      <input key={k} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} placeholder={label}
+      title={k === 'origin' ? 'Applies to all products in this query' : 'Used for new (typed) products'}
       style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 95 }} />
     ))}
-    <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Message / notes" rows={1}
+    <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Message / notes (sent with every product)" rows={1}
      style={{ flex: 1, minWidth: 200, padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, resize: 'vertical', fontFamily: 'inherit' }} />
     <button type="submit" disabled={submitting}
-     style={{ padding: '6px 16px', background: '#1a3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-     {submitting ? 'Sending…' : 'Send'}
+     style={{ padding: '6px 16px', background: '#1a3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+     {submitting ? 'Sending…' : totalChosen > 1 ? `Send ${totalChosen} Queries` : 'Send'}
     </button>
+   </div>
+   <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 6 }}>
+    Existing products use their own Make / COO / Grade / Purity. The boxes above are used for new products you type.
    </div>
   </form>
  )}
