@@ -723,14 +723,44 @@ export default function AdminProducts() {
   )}
 
   {/* Product + Price table grouped */}
+  {(() => {
+   // Status per product for the selected date
+   const hasPrice = p => { const v = priceMap[p._id]?.price; return v !== '' && v !== undefined && v !== null; };
+   const todayP = p => hasPrice(p) && !priceMap[p._id]?.isLatest;
+   const oldP = p => hasPrice(p) && priceMap[p._id]?.isLatest;
+   const all = Object.values(grouped).flat();
+   const nToday = all.filter(todayP).length, nOld = all.filter(oldP).length, nNone = all.length - nToday - nOld;
+   const allOpen = Object.keys(grouped).length > 0 && Object.keys(grouped).every(g => expandedGroups.has(g));
+   return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: '#6b7280', margin: '0 2px 8px', flexWrap: 'wrap' }}>
+     <span><b style={{ color: '#1a3a6b' }}>{Object.keys(grouped).length}</b> products · <b style={{ color: '#1a3a6b' }}>{all.length}</b> variants</span>
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#16a34a', display: 'inline-block' }} />Priced on {date}: <b style={{ color: '#16a34a' }}>{nToday}</b></span>
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#e8a020', display: 'inline-block' }} />Older price: <b style={{ color: '#b45309' }}>{nOld}</b></span>
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#cbd5e1', display: 'inline-block' }} />No price: <b>{nNone}</b></span>
+     <div style={{ flex: 1 }} />
+     <button onClick={() => setExpandedGroups(allOpen ? new Set() : new Set(Object.keys(grouped)))}
+      style={{ fontSize: 11, color: '#1a3a6b', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>
+      {allOpen ? 'Collapse all' : 'Expand all'}
+     </button>
+    </div>
+   );
+  })()}
   {loading && products.length === 0 ? <div className="spinner">Loading...</div> : (
   Object.entries(grouped).map(([group, items]) => {
   const isOpen = expandedGroups.has(group);
-  const pricedInGroup = items.filter(p => priceMap[p._id]?.price !== '' && priceMap[p._id]?.price !== undefined).length;
+  const pv = p => { const v = priceMap[p._id]?.price; return v !== '' && v !== undefined && v !== null; };
+  const nToday = items.filter(p => pv(p) && !priceMap[p._id]?.isLatest).length;
+  const nAny = items.filter(pv).length;
+  const accent = nToday > 0 ? '#16a34a' : nAny > 0 ? '#e8a020' : '#cbd5e1';
+  const lastDates = items.map(p => priceMap[p._id]?.entryDate).filter(Boolean).sort();
+  const lastDate = lastDates.length ? new Date(lastDates.at(-1)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
+  const pricedItems = items.filter(pv);
   return (
-  <div key={group} style={{ marginBottom: 8, border: '1px solid #e5e7eb', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+  <div key={group} style={{ marginBottom: 5, border: `1px solid ${isOpen ? '#c7d7fa' : '#e8ecf3'}`, borderLeft: `4px solid ${accent}`, borderRadius: 9, overflow: 'hidden', background: '#fff', boxShadow: isOpen ? '0 3px 12px rgba(26,58,107,0.08)' : 'none' }}>
    {/* Group header */}
-   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', cursor: 'pointer', background: isOpen ? '#f0f5ff' : '#fafafa', borderBottom: isOpen ? '1px solid #e5e7eb' : 'none', transition: 'background 0.15s' }}>
+   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', cursor: 'pointer', background: isOpen ? '#f3f7ff' : '#fff', borderBottom: isOpen ? '1px solid #e5e7eb' : 'none', transition: 'background 0.15s' }}
+    onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = '#f8faff'; }}
+    onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = '#fff'; }}>
     {/* Group checkbox — selects all products in this group */}
     <input type="checkbox"
      checked={items.every(p => selectedProducts.has(p._id))}
@@ -750,12 +780,24 @@ export default function AdminProducts() {
      <polyline points="9 18 15 12 9 6"/>
     </svg>
     <span style={{ fontWeight: 700, color: '#1a3a6b', fontSize: 13 }}>{group}</span>
-    <div style={{ flex: 1, display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-     {items.filter(p => priceMap[p._id]?.price).slice(0, 3).map(p => (
-      <span key={p._id} style={{ fontSize: 11, background: '#e8f5e9', color: '#15803d', padding: '2px 7px', borderRadius: 6, fontWeight: 700 }}>
-       {p.make || p.grade || '—'} ₹{Number(priceMap[p._id].price).toLocaleString()}
-      </span>
-     ))}
+    <span title="Variants (make / COO / grade)" style={{ fontSize: 10, color: '#64748b', background: '#f1f5f9', padding: '1px 7px', borderRadius: 99, fontWeight: 700 }}>
+     {items.length} {items.length === 1 ? 'variant' : 'variants'}
+    </span>
+    {nToday > 0
+     ? <span style={{ fontSize: 10, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '1px 7px', borderRadius: 99 }}>✓ {nToday}/{items.length} priced</span>
+     : nAny > 0
+      ? <span style={{ fontSize: 10, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '1px 7px', borderRadius: 99 }}>Last {lastDate || 'price'}</span>
+      : <span style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8' }}>No price</span>}
+    <div style={{ flex: 1, display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'nowrap', overflow: 'hidden' }}>
+     {pricedItems.slice(0, 3).map(p => {
+      const old = priceMap[p._id]?.isLatest;
+      return (
+       <span key={p._id} style={{ fontSize: 11, background: old ? '#fffbeb' : '#ecfdf3', color: old ? '#b45309' : '#15803d', border: `1px solid ${old ? '#fde68a' : '#bbf7d0'}`, padding: '1px 7px', borderRadius: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>
+        <span style={{ fontWeight: 500, opacity: 0.8 }}>{p.make || p.coo || p.grade || '—'}</span> ₹{Number(priceMap[p._id].price).toLocaleString()}
+       </span>
+      );
+     })}
+     {pricedItems.length > 3 && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>+{pricedItems.length - 3} more</span>}
     </div>
     </div>{/* /clickable expand area */}
    </div>

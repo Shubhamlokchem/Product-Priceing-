@@ -24,6 +24,7 @@ export default function AdminQueries() {
  const [showPicker, setShowPicker] = useState(false);
  const [pickSearch, setPickSearch] = useState('');
  const pickerRef = useRef(null);
+ const newNameRef = useRef(null);
 
  // Load product list when the form opens
  useEffect(() => {
@@ -43,6 +44,7 @@ export default function AdminQueries() {
   if (!name) return;
   setNewItems(a => [...a, { ...newDraft, productName: name }]);
   setNewDraft(EMPTY_NEW);
+  setTimeout(() => newNameRef.current?.focus(), 0); // ready for the next one
  };
  const resetForm = () => { setForm(EMPTY_FORM); setPicked(new Set()); setNewItems([]); setNewDraft(EMPTY_NEW); setPickSearch(''); };
 
@@ -171,23 +173,47 @@ export default function AdminQueries() {
           </label>
          ))}
        </div>
-       {/* Add new product */}
+       {/* Add new product(s) */}
        <div style={{ padding: 8, background: '#fffbeb', borderTop: '1px solid #fde68a' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5 }}>+ New product</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
-         <input value={newDraft.productName} onChange={e => setNewDraft(d => ({ ...d, productName: e.target.value }))}
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 5 }}>
+         <span style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.4 }}>New products</span>
+         {newItems.length > 0 && <span style={{ marginLeft: 6, fontSize: 10, background: '#e8a020', color: '#fff', padding: '0 6px', borderRadius: 99, fontWeight: 700 }}>{newItems.length} added</span>}
+        </div>
+
+        {/* Already-added new products */}
+        {newItems.length > 0 && (
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6, maxHeight: 90, overflowY: 'auto' }}>
+          {newItems.map((n, i) => (
+           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, background: '#fff', border: '1px solid #fde68a', borderRadius: 6, padding: '3px 8px', color: '#92400e' }}>
+            <span style={{ fontWeight: 700 }}>{i + 1}.</span>
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+             <strong>{n.productName}</strong>{[n.make, n.coo, n.grade, n.purity].filter(Boolean).map(v => ` · ${v}`).join('')}
+            </span>
+            <span onClick={() => setNewItems(a => a.filter((_, j) => j !== i))} title="Remove"
+             style={{ cursor: 'pointer', color: '#dc2626', fontSize: 14, lineHeight: 1 }}>×</span>
+           </div>
+          ))}
+         </div>
+        )}
+
+        {/* Entry row */}
+        <div style={{ display: 'flex', gap: 5 }}>
+         <input ref={newNameRef} value={newDraft.productName} onChange={e => setNewDraft(d => ({ ...d, productName: e.target.value }))}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewItem(); } }}
-          placeholder="Product name *" style={{ ...inp, gridColumn: 'span 2' }} />
+          placeholder={newItems.length ? 'Next product name…' : 'Product name *'} style={{ ...inp, flex: 1 }} />
+         <button type="button" onClick={addNewItem} title="Add this product"
+          style={{ padding: '0 12px', background: '#e8a020', color: '#fff', border: 'none', borderRadius: 7, fontSize: 16, fontWeight: 700, cursor: 'pointer', opacity: newDraft.productName.trim() ? 1 : 0.55 }}>
+          +
+         </button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, marginTop: 5 }}>
          {[['make','Make'],['coo','COO'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
           <input key={k} value={newDraft[k]} onChange={e => setNewDraft(d => ({ ...d, [k]: e.target.value }))}
            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewItem(); } }}
-           placeholder={label} style={inp} />
+           placeholder={label} style={{ ...inp, minWidth: 0 }} />
          ))}
         </div>
-        <button type="button" onClick={addNewItem} disabled={!newDraft.productName.trim()}
-         style={{ marginTop: 6, width: '100%', padding: '6px', background: newDraft.productName.trim() ? '#e8a020' : '#f3e3bf', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: newDraft.productName.trim() ? 'pointer' : 'default' }}>
-         Add to query
-        </button>
+        <div style={{ fontSize: 10, color: '#a16207', marginTop: 5 }}>Type a name → press <b>+</b> or Enter. Repeat to add more.</div>
        </div>
       </div>
      )}
