@@ -802,8 +802,9 @@ export default function AdminProducts() {
  </td>
  {/* Last updated — show updatedAt if available, else entry date */}
  <td style={{ fontSize: 13, whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 600, color: priceMap[p._id]?.isLatest ? '#b45309' : '#6b7280' }}>
-  {fmtDate(priceMap[p._id]?.updatedAt || priceMap[p._id]?.entryDate) || '—'}
-  {priceMap[p._id]?.isLatest && <span style={{ fontSize: 10, marginLeft: 3, color: '#b45309' }}>↑prev</span>}
+  {priceMap[p._id]?.price !== '' && priceMap[p._id]?.price !== null && priceMap[p._id]?.price !== undefined
+   ? <>{fmtDate(priceMap[p._id]?.updatedAt || priceMap[p._id]?.entryDate) || '—'}{priceMap[p._id]?.isLatest && <span style={{ fontSize: 10, marginLeft: 3, color: '#b45309' }}>↑prev</span>}</>
+   : '—'}
  </td>
  {/* Actions */}
  <td>
