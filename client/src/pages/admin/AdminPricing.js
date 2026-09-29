@@ -371,7 +371,7 @@ export default function AdminPricing() {
     <div style={{ flex: 1 }} />
 
     {/* Inline stats */}
-    <span style={{ fontSize: 12, color: '#6b7280', flexShrink: 0 }}>Total: <strong style={{ color: '#1a3a6b' }}>{pricedCount}</strong></span>
+    <span style={{ fontSize: 12, color: '#6b7280', flexShrink: 0 }}>Total: <strong style={{ color: '#1a3a6b' }}>{Object.keys(grouped).length}</strong></span>
     <span style={{ fontSize: 12, color: countdown <= 10 ? '#dc2626' : '#9ca3af', flexShrink: 0 }}>↻ {countdown}s</span>
 
     {/* Date */}
