@@ -196,10 +196,8 @@ export default function AdminPricing() {
   URL.revokeObjectURL(a.href);
  };
 
- // If selected date has no prices, fall back to latest known prices
- const hasDatePrices = items.some(i => i.price !== null);
- const displayItems = hasDatePrices ? items : latestItems;
- const usingLatest = !hasDatePrices && latestItems.some(i => i.price !== null);
+ const displayItems = items;
+ const usingLatest = false;
 
  const filtered = displayItems.filter(item => {
   if (item.price === null) return false;
