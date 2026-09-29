@@ -210,7 +210,7 @@ export default function AdminProducts() {
  const had = origMap[p._id] != null;
  return (cur !== '' && cur !== undefined) || had;
  });
- if (!toSave.length) { setMsg({ type: 'error', text: 'Enter at least one price.' }); setSaving(false); return; }
+ if (!toSave.length) { setSaving(false); return; }
 
  const prices = toSave.map(p => {
  const raw = priceMap[p._id]?.price;
