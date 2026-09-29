@@ -203,9 +203,7 @@ export default function AdminPricing() {
 
  const filtered = displayItems.filter(item => {
   if (item.price === null) return false;
-  const matchGroup = filterGroups.size === 0 || filterGroups.has(item.product?.group);
-  const matchProduct = filterProducts.size === 0 || filterProducts.has(item.product?._id);
-  return matchGroup && matchProduct;
+  return filterGroups.size === 0 || filterGroups.has(item.product?.group);
  });
 
  const grouped = filtered.reduce((acc, item) => {
@@ -405,45 +403,6 @@ export default function AdminPricing() {
      )}
     </div>
 
-    {/* Product multi-select search */}
-    <div style={{ position: 'relative', flexShrink: 0 }} ref={productDDRef}>
-     <button onClick={() => setShowProductDD(v => !v)}
-      style={{ padding: '6px 12px', border: `1.5px solid ${filterProducts.size ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: '#fff', cursor: 'pointer', color: filterProducts.size ? '#1a3a6b' : '#9ca3af', fontWeight: filterProducts.size ? 600 : 400, whiteSpace: 'nowrap', minWidth: 120 }}>
-      {filterProducts.size === 0 ? 'All Products' : `${filterProducts.size} product${filterProducts.size > 1 ? 's' : ''}`} ▾
-     </button>
-     {showProductDD && (
-      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 200, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 240, maxHeight: 300, display: 'flex', flexDirection: 'column', padding: '6px 0' }}>
-       <div style={{ padding: '4px 10px 6px', borderBottom: '1px solid #f3f4f6' }}>
-        <input autoFocus value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="Search products…"
-         style={{ width: '100%', padding: '5px 8px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
-       </div>
-       <div style={{ padding: '4px 10px 4px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6b7280', cursor: 'pointer', fontWeight: 600 }}>
-         <input type="checkbox"
-          checked={filterProducts.size === displayItems.filter(i => i.price !== null).length}
-          onChange={() => {
-           const all = displayItems.filter(i => i.price !== null).map(i => i.product._id);
-           filterProducts.size === all.length ? setFilterProducts(new Set()) : setFilterProducts(new Set(all));
-          }}
-          style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
-         Select All
-        </label>
-        {filterProducts.size > 0 && <button onClick={() => setFilterProducts(new Set())} style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear</button>}
-       </div>
-       <div style={{ overflowY: 'auto', flex: 1 }}>
-        {displayItems.filter(i => i.price !== null && (
-         !productSearch || (i.product.group + ' ' + (i.product.make||'')).toLowerCase().includes(productSearch.toLowerCase())
-        )).map(item => (
-         <label key={item.product._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: filterProducts.has(item.product._id) ? '#f0f5ff' : 'transparent', color: filterProducts.has(item.product._id) ? '#1a3a6b' : '#374151' }}>
-          <input type="checkbox" checked={filterProducts.has(item.product._id)} onChange={() => toggleProduct(item.product._id)} style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
-          <span style={{ fontWeight: 600 }}>{item.product.group}</span>
-          {item.product.make && <span style={{ color: '#6b7280' }}>· {item.product.make}</span>}
-         </label>
-        ))}
-       </div>
-      </div>
-     )}
-    </div>
 
     {/* Export */}
     <button onClick={exportPrices} style={{ padding: '6px 12px', background: '#fff', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ Export CSV</button>
