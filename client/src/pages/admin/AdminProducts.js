@@ -413,15 +413,17 @@ export default function AdminProducts() {
       {/* Product list */}
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
        {products
+        .filter((p, idx, arr) => arr.findIndex(x => norm(x.group) === norm(p.group) && norm(x.make||'') === norm(p.make||'') && norm(x.coo||'') === norm(p.coo||'')) === idx)
         .filter(p => !productSearch || [p.group, p.make||'', p.coo||'', p.grade||''].join(' ').toLowerCase().includes(productSearch.toLowerCase()))
         .map(p => {
-         const checked = filterProducts.has(p._id);
+         const ids = products.filter(x => norm(x.group) === norm(p.group) && norm(x.make||'') === norm(p.make||'') && norm(x.coo||'') === norm(p.coo||'')).map(x => x._id);
+         const checked = ids.some(id => filterProducts.has(id));
          return (
           <label key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: checked ? '#f0f5ff' : 'transparent', borderBottom: '1px solid #f9fafb' }}
            onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#f8faff'; }}
            onMouseLeave={e => { e.currentTarget.style.background = checked ? '#f0f5ff' : 'transparent'; }}>
            <input type="checkbox" checked={checked}
-            onChange={() => setFilterProducts(prev => { const n = new Set(prev); n.has(p._id) ? n.delete(p._id) : n.add(p._id); return n; })}
+            onChange={() => setFilterProducts(prev => { const n = new Set(prev); checked ? ids.forEach(id => n.delete(id)) : ids.forEach(id => n.add(id)); return n; })}
             style={{ accentColor: '#1a3a6b', cursor: 'pointer', flexShrink: 0, width: 14, height: 14 }} />
            <span style={{ minWidth: 0 }}>
             <span style={{ color: checked ? '#1a3a6b' : '#1f2937', fontWeight: checked ? 700 : 500 }}>{p.group}</span>

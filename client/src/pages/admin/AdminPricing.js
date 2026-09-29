@@ -116,22 +116,29 @@ export default function AdminPricing() {
  const [countdown, setCountdown] = useState(REFRESH_SEC);
  const [filterGroups, setFilterGroups] = useState(new Set());
  const [showGroupDD, setShowGroupDD] = useState(false);
- const [search, setSearch] = useState('');
+ const [filterProducts, setFilterProducts] = useState(new Set());
+ const [showProductDD, setShowProductDD] = useState(false);
+ const [productSearch, setProductSearch] = useState('');
  const [tvMode, setTvMode] = useState(false);
  const [tvPage, setTvPage] = useState(0);
  const TV_PAGE_SEC = 20;        // seconds before auto-advance
  const [tvCountdown, setTvCountdown] = useState(TV_PAGE_SEC);
  const [latestItems, setLatestItems] = useState([]); // always-latest prices for TV mode
  const groupDDRef = useRef(null);
+ const productDDRef = useRef(null);
 
  useEffect(() => {
-  const h = e => { if (groupDDRef.current && !groupDDRef.current.contains(e.target)) setShowGroupDD(false); };
+  const h = e => {
+   if (groupDDRef.current && !groupDDRef.current.contains(e.target)) setShowGroupDD(false);
+   if (productDDRef.current && !productDDRef.current.contains(e.target)) setShowProductDD(false);
+  };
   document.addEventListener('mousedown', h);
   return () => document.removeEventListener('mousedown', h);
  }, []);
 
- const loadData = useCallback(async () => {
-  setLoading(true); setError('');
+ const loadData = useCallback(async (showSpinner = false) => {
+  if (showSpinner) setLoading(true);
+  setError('');
   try {
    const [priceRes, grpRes, latestRes] = await Promise.all([
     api.get(`/prices/date/${date}`),
@@ -143,13 +150,13 @@ export default function AdminPricing() {
    setLatestItems(latestRes.data);
    setCountdown(REFRESH_SEC);
   } catch (err) { setError(err.response?.data?.message || 'Failed to load'); }
-  finally { setLoading(false); }
+  finally { if (showSpinner) setLoading(false); }
  }, [date]);
 
- useEffect(() => { loadData(); }, [loadData]);
+ useEffect(() => { loadData(true); }, [loadData]);
 
  useEffect(() => {
-  const t = setInterval(() => setCountdown(c => { if (c <= 1) { loadData(); return REFRESH_SEC; } return c - 1; }), 1000);
+  const t = setInterval(() => setCountdown(c => { if (c <= 1) { loadData(false); return REFRESH_SEC; } return c - 1; }), 1000);
   return () => clearInterval(t);
  }, [loadData]);
 
@@ -169,6 +176,7 @@ export default function AdminPricing() {
  }, [tvMode]);
 
  const toggleGroup = g => setFilterGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
+ const toggleProduct = id => setFilterProducts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
  const exportPrices = () => {
   const headers = ['group','make','coo','grade','purity','package','unit','price','notes','ex','date'];
@@ -196,8 +204,8 @@ export default function AdminPricing() {
  const filtered = displayItems.filter(item => {
   if (item.price === null) return false;
   const matchGroup = filterGroups.size === 0 || filterGroups.has(item.product?.group);
-  const q = search.toLowerCase();
-  return matchGroup && (!q || item.product?.group?.toLowerCase().includes(q) || item.product?.make?.toLowerCase().includes(q) || item.product?.coo?.toLowerCase().includes(q));
+  const matchProduct = filterProducts.size === 0 || filterProducts.has(item.product?._id);
+  return matchGroup && matchProduct;
  });
 
  const grouped = filtered.reduce((acc, item) => {
@@ -397,9 +405,45 @@ export default function AdminPricing() {
      )}
     </div>
 
-    {/* Search */}
-    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
-     style={{ padding: '6px 10px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, width: 130, flexShrink: 0 }} />
+    {/* Product multi-select search */}
+    <div style={{ position: 'relative', flexShrink: 0 }} ref={productDDRef}>
+     <button onClick={() => setShowProductDD(v => !v)}
+      style={{ padding: '6px 12px', border: `1.5px solid ${filterProducts.size ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: '#fff', cursor: 'pointer', color: filterProducts.size ? '#1a3a6b' : '#9ca3af', fontWeight: filterProducts.size ? 600 : 400, whiteSpace: 'nowrap', minWidth: 120 }}>
+      {filterProducts.size === 0 ? 'All Products' : `${filterProducts.size} product${filterProducts.size > 1 ? 's' : ''}`} ▾
+     </button>
+     {showProductDD && (
+      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 200, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 240, maxHeight: 300, display: 'flex', flexDirection: 'column', padding: '6px 0' }}>
+       <div style={{ padding: '4px 10px 6px', borderBottom: '1px solid #f3f4f6' }}>
+        <input autoFocus value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="Search products…"
+         style={{ width: '100%', padding: '5px 8px', border: '1px solid #e5e7eb', borderRadius: 6, fontSize: 12, outline: 'none', boxSizing: 'border-box' }} />
+       </div>
+       <div style={{ padding: '4px 10px 4px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#6b7280', cursor: 'pointer', fontWeight: 600 }}>
+         <input type="checkbox"
+          checked={filterProducts.size === displayItems.filter(i => i.price !== null).length}
+          onChange={() => {
+           const all = displayItems.filter(i => i.price !== null).map(i => i.product._id);
+           filterProducts.size === all.length ? setFilterProducts(new Set()) : setFilterProducts(new Set(all));
+          }}
+          style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
+         Select All
+        </label>
+        {filterProducts.size > 0 && <button onClick={() => setFilterProducts(new Set())} style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear</button>}
+       </div>
+       <div style={{ overflowY: 'auto', flex: 1 }}>
+        {displayItems.filter(i => i.price !== null && (
+         !productSearch || (i.product.group + ' ' + (i.product.make||'')).toLowerCase().includes(productSearch.toLowerCase())
+        )).map(item => (
+         <label key={item.product._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: filterProducts.has(item.product._id) ? '#f0f5ff' : 'transparent', color: filterProducts.has(item.product._id) ? '#1a3a6b' : '#374151' }}>
+          <input type="checkbox" checked={filterProducts.has(item.product._id)} onChange={() => toggleProduct(item.product._id)} style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
+          <span style={{ fontWeight: 600 }}>{item.product.group}</span>
+          {item.product.make && <span style={{ color: '#6b7280' }}>· {item.product.make}</span>}
+         </label>
+        ))}
+       </div>
+      </div>
+     )}
+    </div>
 
     {/* Export */}
     <button onClick={exportPrices} style={{ padding: '6px 12px', background: '#fff', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ Export CSV</button>
