@@ -752,8 +752,6 @@ export default function AdminProducts() {
   const nToday = items.filter(p => pv(p) && !priceMap[p._id]?.isLatest).length;
   const nAny = items.filter(pv).length;
   const accent = nToday > 0 ? '#16a34a' : nAny > 0 ? '#e8a020' : '#cbd5e1';
-  const lastDates = items.map(p => priceMap[p._id]?.entryDate).filter(Boolean).sort();
-  const lastDate = lastDates.length ? new Date(lastDates.at(-1)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : null;
   const pricedItems = items.filter(pv);
   return (
   <div key={group} style={{ marginBottom: 5, border: `1px solid ${isOpen ? '#c7d7fa' : '#e8ecf3'}`, borderLeft: `4px solid ${accent}`, borderRadius: 9, overflow: 'hidden', background: '#fff', boxShadow: isOpen ? '0 3px 12px rgba(26,58,107,0.08)' : 'none' }}>
@@ -780,14 +778,6 @@ export default function AdminProducts() {
      <polyline points="9 18 15 12 9 6"/>
     </svg>
     <span style={{ fontWeight: 700, color: '#1a3a6b', fontSize: 13 }}>{group}</span>
-    <span title="Variants (make / COO / grade)" style={{ fontSize: 10, color: '#64748b', background: '#f1f5f9', padding: '1px 7px', borderRadius: 99, fontWeight: 700 }}>
-     {items.length} {items.length === 1 ? 'variant' : 'variants'}
-    </span>
-    {nToday > 0
-     ? <span style={{ fontSize: 10, fontWeight: 700, color: '#15803d', background: '#dcfce7', padding: '1px 7px', borderRadius: 99 }}>✓ {nToday}/{items.length} priced</span>
-     : nAny > 0
-      ? <span style={{ fontSize: 10, fontWeight: 700, color: '#b45309', background: '#fef3c7', padding: '1px 7px', borderRadius: 99 }}>Last {lastDate || 'price'}</span>
-      : <span style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8' }}>No price</span>}
     <div style={{ flex: 1, display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'nowrap', overflow: 'hidden' }}>
      {pricedItems.slice(0, 3).map(p => {
       const old = priceMap[p._id]?.isLatest;
