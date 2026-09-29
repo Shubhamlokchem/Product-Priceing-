@@ -538,11 +538,6 @@ export default function AdminProducts() {
       {!bulkAction ? (
        <div style={{ paddingBottom: 6 }}>
         {[
-         { key: 'grade',      label: '✏️ Change Grade',    color: '#1a3a6b' },
-         { key: 'coo',        label: '✏️ Change COO',      color: '#1a3a6b' },
-         { key: 'make',       label: '✏️ Change Make',     color: '#1a3a6b' },
-         { key: 'purity',     label: '✏️ Change Purity',   color: '#1a3a6b' },
-         { key: 'unit',       label: '✏️ Change Unit',     color: '#1a3a6b' },
          { key: 'clearPrice', label: '🗑 Clear Prices',    color: '#b45309' },
          { key: 'delete',     label: '🗑 Delete Products', color: '#dc2626' },
         ].map(({ key, label, color }) => (
