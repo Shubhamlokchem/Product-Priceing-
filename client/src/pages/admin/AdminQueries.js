@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../../api/axios';
 import '../Dashboard.css';
 
-const EMPTY_FORM = { make: '', coo: '', origin: '', grade: '', purity: '', message: '' };
+const EMPTY_FORM = { origin: '', message: '' };
+const EMPTY_NEW = { productName: '', make: '', coo: '', grade: '', purity: '' };
 const productLabel = p => [p.group, p.make, p.coo, p.grade, p.purity, p.itemPackage].filter(Boolean).join(' · ');
 
 export default function AdminQueries() {
@@ -18,8 +19,8 @@ export default function AdminQueries() {
  const [submitting, setSubmitting] = useState(false);
  const [allProducts, setAllProducts] = useState([]);
  const [picked, setPicked] = useState(new Set());      // selected existing product ids
- const [newNames, setNewNames] = useState([]);         // typed new product names
- const [newName, setNewName] = useState('');
+ const [newItems, setNewItems] = useState([]);         // typed new products (with own details)
+ const [newDraft, setNewDraft] = useState(EMPTY_NEW);
  const [showPicker, setShowPicker] = useState(false);
  const [pickSearch, setPickSearch] = useState('');
  const pickerRef = useRef(null);
@@ -37,13 +38,13 @@ export default function AdminQueries() {
  }, []);
 
  const togglePick = id => setPicked(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
- const addNewName = () => {
-  const v = newName.trim();
-  if (!v) return;
-  if (!newNames.some(x => x.toLowerCase() === v.toLowerCase())) setNewNames(a => [...a, v]);
-  setNewName('');
+ const addNewItem = () => {
+  const name = newDraft.productName.trim();
+  if (!name) return;
+  setNewItems(a => [...a, { ...newDraft, productName: name }]);
+  setNewDraft(EMPTY_NEW);
  };
- const resetForm = () => { setForm(EMPTY_FORM); setPicked(new Set()); setNewNames([]); setNewName(''); setPickSearch(''); };
+ const resetForm = () => { setForm(EMPTY_FORM); setPicked(new Set()); setNewItems([]); setNewDraft(EMPTY_NEW); setPickSearch(''); };
 
  const load = async () => {
  setLoading(true);
@@ -69,7 +70,7 @@ export default function AdminQueries() {
  // Admin: send one query per selected / typed product
  const submitQuery = async e => {
   e.preventDefault();
-  const typed = [...newNames, ...(newName.trim() ? [newName.trim()] : [])];
+  const typed = [...newItems, ...(newDraft.productName.trim() ? [{ ...newDraft, productName: newDraft.productName.trim() }] : [])];
   const existing = allProducts.filter(p => picked.has(p._id));
   if (!existing.length && !typed.length) { setMsg({ type: 'error', text: 'Select at least one product or type a new one.' }); return; }
   const payloads = [
@@ -78,8 +79,8 @@ export default function AdminQueries() {
     productName: p.group, make: p.make || '', coo: p.coo || '', origin: form.origin,
     grade: p.grade || '', purity: p.purity || '', message: form.message,
    })),
-   // New products: use the Make / COO / Grade / Purity boxes
-   ...typed.map(name => ({ ...form, productName: name })),
+   // New products: their own typed details
+   ...typed.map(n => ({ ...n, origin: form.origin, message: form.message })),
   ];
   setSubmitting(true); setMsg(null);
   let ok = 0, failed = 0;
@@ -98,7 +99,8 @@ export default function AdminQueries() {
   const q = pickSearch.trim().toLowerCase();
   return !q || productLabel(p).toLowerCase().includes(q);
  });
- const totalChosen = picked.size + newNames.length + (newName.trim() ? 1 : 0);
+ const totalChosen = picked.size + newItems.length + (newDraft.productName.trim() ? 1 : 0);
+ const inp = { padding: '6px 9px', border: '1.5px solid #dbe3f4', borderRadius: 7, fontSize: 12, outline: 'none', background: '#fff' };
 
  const displayed = queries.filter(q => filter === 'all' || q.status === filter);
  const openCount = queries.filter(q => q.status === 'open').length;
@@ -135,80 +137,90 @@ export default function AdminQueries() {
  {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 16 }}>{msg.text}</div>}
 
  {showForm && (
-  <form onSubmit={submitQuery} style={{ marginBottom: 14, border: '1.5px solid #c7d7fa', borderRadius: 10, padding: '12px 16px', background: '#f8faff' }}>
-   <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Query</div>
-
-   {/* Row 1: pick existing products + type new products */}
-   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+  <form onSubmit={submitQuery} style={{ marginBottom: 12, border: '1px solid #dbe3f4', borderLeft: '4px solid #1a3a6b', borderRadius: 10, padding: '10px 12px', background: '#fff', boxShadow: '0 2px 8px rgba(26,58,107,0.06)' }}>
+   {/* Single compact row */}
+   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
     <div style={{ position: 'relative' }} ref={pickerRef}>
      <button type="button" onClick={() => setShowPicker(v => !v)}
-      style={{ padding: '6px 12px', border: `1.5px solid ${picked.size ? '#1a3a6b' : '#c7d7fa'}`, borderRadius: 7, fontSize: 12, background: '#fff', cursor: 'pointer', color: picked.size ? '#1a3a6b' : '#6b7280', fontWeight: 600, minWidth: 220, textAlign: 'left' }}>
-      {picked.size ? `${picked.size} product${picked.size > 1 ? 's' : ''} selected` : 'Select existing products'} ▾
+      style={{ ...inp, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontWeight: 600, minWidth: 200,
+       color: totalChosen ? '#1a3a6b' : '#6b7280', borderColor: showPicker || totalChosen ? '#1a3a6b' : '#dbe3f4' }}>
+      <span style={{ flex: 1, textAlign: 'left' }}>{totalChosen ? `${totalChosen} product${totalChosen > 1 ? 's' : ''} chosen` : 'Choose products'}</span>
+      {totalChosen > 0 && <span style={{ background: '#1a3a6b', color: '#fff', fontSize: 10, padding: '1px 7px', borderRadius: 99 }}>{totalChosen}</span>}
+      <span style={{ fontSize: 10 }}>▾</span>
      </button>
+
      {showPicker && (
-      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 300, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 380 }}>
-       <div style={{ padding: 8, borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 6 }}>
-        <input autoFocus value={pickSearch} onChange={e => setPickSearch(e.target.value)} placeholder="Search products…"
-         style={{ flex: 1, padding: '6px 9px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12 }} />
+      <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 300, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, boxShadow: '0 12px 32px rgba(0,0,0,0.14)', width: 400, overflow: 'hidden' }}>
+       {/* Search */}
+       <div style={{ padding: 8, display: 'flex', gap: 6, alignItems: 'center', borderBottom: '1px solid #f1f3f7' }}>
+        <input autoFocus value={pickSearch} onChange={e => setPickSearch(e.target.value)} placeholder="🔍 Search products…" style={{ ...inp, flex: 1 }} />
         {picked.size > 0 && <button type="button" onClick={() => setPicked(new Set())}
          style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear</button>}
        </div>
-       <div style={{ maxHeight: 280, overflowY: 'auto', padding: '4px 0' }}>
+       {/* Checkbox list */}
+       <div style={{ maxHeight: 240, overflowY: 'auto', padding: '4px 0' }}>
         {pickList.length === 0
-         ? <div style={{ padding: '10px 12px', fontSize: 12, color: '#9ca3af' }}>{allProducts.length ? 'No match — type it as a new product instead.' : 'Loading products…'}</div>
+         ? <div style={{ padding: '10px 12px', fontSize: 12, color: '#9ca3af' }}>{allProducts.length ? 'No match — add it as a new product below.' : 'Loading products…'}</div>
          : pickList.map(p => (
-          <label key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: picked.has(p._id) ? '#f0f5ff' : 'transparent', color: '#374151' }}>
+          <label key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', cursor: 'pointer', fontSize: 12, background: picked.has(p._id) ? '#eef3ff' : 'transparent', color: '#374151' }}>
            <input type="checkbox" checked={picked.has(p._id)} onChange={() => togglePick(p._id)} style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
-           {productLabel(p)}
+           <strong style={{ color: '#1a3a6b', fontWeight: 600 }}>{p.group}</strong>
+           <span style={{ color: '#9ca3af', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {[p.make, p.coo, p.grade, p.purity].filter(Boolean).join(' · ')}
+           </span>
           </label>
          ))}
+       </div>
+       {/* Add new product */}
+       <div style={{ padding: 8, background: '#fffbeb', borderTop: '1px solid #fde68a' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#92400e', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 5 }}>+ New product</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 5 }}>
+         <input value={newDraft.productName} onChange={e => setNewDraft(d => ({ ...d, productName: e.target.value }))}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewItem(); } }}
+          placeholder="Product name *" style={{ ...inp, gridColumn: 'span 2' }} />
+         {[['make','Make'],['coo','COO'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
+          <input key={k} value={newDraft[k]} onChange={e => setNewDraft(d => ({ ...d, [k]: e.target.value }))}
+           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewItem(); } }}
+           placeholder={label} style={inp} />
+         ))}
+        </div>
+        <button type="button" onClick={addNewItem} disabled={!newDraft.productName.trim()}
+         style={{ marginTop: 6, width: '100%', padding: '6px', background: newDraft.productName.trim() ? '#e8a020' : '#f3e3bf', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: newDraft.productName.trim() ? 'pointer' : 'default' }}>
+         Add to query
+        </button>
        </div>
       </div>
      )}
     </div>
 
-    <span style={{ fontSize: 11, color: '#9ca3af' }}>or</span>
-    <input value={newName} onChange={e => setNewName(e.target.value)}
-     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewName(); } }}
-     placeholder="New product name"
-     style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 180 }} />
-    <button type="button" onClick={addNewName}
-     style={{ padding: '6px 10px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 11, background: '#fff', cursor: 'pointer', color: '#1a3a6b', fontWeight: 600 }}>+ Add</button>
+    <input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+     placeholder="Message / notes (sent with every product)" style={{ ...inp, flex: 1, minWidth: 220 }} />
+    <input value={form.origin} onChange={e => setForm(f => ({ ...f, origin: e.target.value }))}
+     placeholder="Origin" style={{ ...inp, width: 90 }} />
+    <button type="submit" disabled={submitting}
+     style={{ padding: '7px 18px', background: 'linear-gradient(135deg,#1a3a6b,#2451a0)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(26,58,107,0.25)' }}>
+     {submitting ? 'Sending…' : totalChosen > 1 ? `Send ${totalChosen} Queries` : 'Send'}
+    </button>
    </div>
 
    {/* Chosen products as chips */}
-   {(picked.size > 0 || newNames.length > 0) && (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+   {(picked.size > 0 || newItems.length > 0) && (
+    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 8 }}>
      {allProducts.filter(p => picked.has(p._id)).map(p => (
-      <span key={p._id} style={{ fontSize: 11, background: '#e0e7ff', color: '#1a3a6b', padding: '3px 8px', borderRadius: 99, fontWeight: 600 }}>
-       {productLabel(p)} <span onClick={() => togglePick(p._id)} style={{ cursor: 'pointer', marginLeft: 4, color: '#dc2626' }}>✕</span>
+      <span key={p._id} style={{ fontSize: 11, background: '#eef3ff', color: '#1a3a6b', padding: '3px 4px 3px 9px', borderRadius: 99, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+       {productLabel(p)}
+       <span onClick={() => togglePick(p._id)} style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 13, lineHeight: 1, padding: '0 3px' }}>×</span>
       </span>
      ))}
-     {newNames.map(n => (
-      <span key={n} style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '3px 8px', borderRadius: 99, fontWeight: 600 }}>
-       NEW: {n} <span onClick={() => setNewNames(a => a.filter(x => x !== n))} style={{ cursor: 'pointer', marginLeft: 4, color: '#dc2626' }}>✕</span>
+     {newItems.map((n, i) => (
+      <span key={i} style={{ fontSize: 11, background: '#fef3c7', color: '#92400e', padding: '3px 4px 3px 9px', borderRadius: 99, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+       <span style={{ fontSize: 9, background: '#e8a020', color: '#fff', padding: '0 5px', borderRadius: 4 }}>NEW</span>
+       {[n.productName, n.make, n.coo, n.grade, n.purity].filter(Boolean).join(' · ')}
+       <span onClick={() => setNewItems(a => a.filter((_, j) => j !== i))} style={{ cursor: 'pointer', color: '#b45309', fontSize: 13, lineHeight: 1, padding: '0 3px' }}>×</span>
       </span>
      ))}
     </div>
    )}
-
-   {/* Row 2: details for new products + message + send */}
-   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-    {[['make','Make'],['coo','COO'],['origin','Origin'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
-     <input key={k} value={form[k]} onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))} placeholder={label}
-      title={k === 'origin' ? 'Applies to all products in this query' : 'Used for new (typed) products'}
-      style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 95 }} />
-    ))}
-    <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Message / notes (sent with every product)" rows={1}
-     style={{ flex: 1, minWidth: 200, padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, resize: 'vertical', fontFamily: 'inherit' }} />
-    <button type="submit" disabled={submitting}
-     style={{ padding: '6px 16px', background: '#1a3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-     {submitting ? 'Sending…' : totalChosen > 1 ? `Send ${totalChosen} Queries` : 'Send'}
-    </button>
-   </div>
-   <div style={{ fontSize: 10, color: '#9ca3af', marginTop: 6 }}>
-    Existing products use their own Make / COO / Grade / Purity. The boxes above are used for new products you type.
-   </div>
   </form>
  )}
 
