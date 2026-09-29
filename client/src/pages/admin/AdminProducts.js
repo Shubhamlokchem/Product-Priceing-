@@ -4,7 +4,7 @@ import '../Dashboard.css';
 
 const EMPTY = { group: '', make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' };
 
-const norm = s => (s || '').toLowerCase().replace(/\s+/g, '');
+const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const downloadCSV = (headers, rows, filename) => {
  const lines = [headers, ...rows].map(r =>
@@ -339,8 +339,16 @@ export default function AdminProducts() {
  const filtered = products.filter(p => {
  const matchGroup = filterGroups.size === 0 || filterGroups.has(p.group);
  const matchProduct = filterProducts.size === 0 || filterProducts.has(p.group);
- const q = search.toLowerCase();
- return matchGroup && matchProduct && (!q || p.group.toLowerCase().includes(q) || (p.make||'').toLowerCase().includes(q) || (p.coo||'').toLowerCase().includes(q) || (p.grade||'').toLowerCase().includes(q));
+ const q = norm(search);
+ return matchGroup && matchProduct && (!q ||
+  norm(p.group).includes(q) ||
+  norm(p.make||'').includes(q) ||
+  norm(p.coo||'').includes(q) ||
+  norm(p.grade||'').includes(q) ||
+  norm(p.purity||'').includes(q) ||
+  norm(p.itemPackage||'').includes(q) ||
+  norm(p.unit||'').includes(q)
+ );
  });
 
  const grouped = filtered.reduce((acc, p) => { if (!acc[p.group]) acc[p.group] = []; acc[p.group].push(p); return acc; }, {});
