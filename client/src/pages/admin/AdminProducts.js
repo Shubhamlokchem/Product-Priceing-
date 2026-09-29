@@ -314,11 +314,19 @@ export default function AdminProducts() {
      return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
     })
     .filter(r => r.group);
+   // Duplicate only if ALL details match (group, make, COO, grade, purity, package, unit)
+   const keyOf = x => [
+    x.group, x.make, x.coo, x.grade, x.purity,
+    x.itemPackage ?? x.package ?? x.itempackage,
+    x.unit || 'kg',
+   ].map(norm).join('|');
+   const existingKeys = new Set(products.map(keyOf));
+   const seenInFile = new Set();
    const duplicates = [], unique = [];
    rows.forEach(row => {
-    const isDup = products.some(p =>
-     norm(p.group) === norm(row.group) && norm(p.make||'') === norm(row.make||'')
-    );
+    const k = keyOf(row);
+    const isDup = existingKeys.has(k) || seenInFile.has(k);
+    seenInFile.add(k);
     (isDup ? duplicates : unique).push(row);
    });
    setImportModal({ duplicates, unique, loading: false });
