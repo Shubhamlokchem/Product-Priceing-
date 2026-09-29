@@ -218,10 +218,12 @@ const SEED = [
   { group: 'ZINC SULPHATE', make: '', coo: 'China' },
 ];
 
-// force=false → only seed if no active products exist
+// force=false → only seed a brand-new, completely empty database (first install).
+//               Deleted (inactive) products count too, so deleting products never
+//               brings the default list back on server restart.
 // force=true  → upsert all (add missing, reactivate soft-deleted)
 async function seedProducts(force = false) {
-  const count = await Product.countDocuments({ isActive: true });
+  const count = await Product.countDocuments({});
   if (!force && count > 0) return 0;
 
   if (force) {
