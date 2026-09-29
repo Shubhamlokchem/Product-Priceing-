@@ -338,7 +338,7 @@ export default function AdminProducts() {
 
  const filtered = products.filter(p => {
  const matchGroup = filterGroups.size === 0 || filterGroups.has(p.group);
- const matchProduct = filterProducts.size === 0 || filterProducts.has(p._id);
+ const matchProduct = filterProducts.size === 0 || filterProducts.has(p.group);
  const q = search.toLowerCase();
  return matchGroup && matchProduct && (!q || p.group.toLowerCase().includes(q) || (p.make||'').toLowerCase().includes(q) || (p.coo||'').toLowerCase().includes(q) || (p.grade||'').toLowerCase().includes(q));
  });
@@ -384,7 +384,7 @@ export default function AdminProducts() {
    <div style={{ position: 'relative', flexShrink: 0 }} ref={productDDRef}>
     <button onClick={() => { setShowProductDD(v => !v); setProductSearch(''); }}
      style={{ padding: '6px 12px', border: `1.5px solid ${filterProducts.size ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: filterProducts.size ? '#f0f5ff' : '#fff', cursor: 'pointer', color: filterProducts.size ? '#1a3a6b' : '#9ca3af', fontWeight: filterProducts.size ? 600 : 400, whiteSpace: 'nowrap', minWidth: 140 }}>
-     {filterProducts.size === 0 ? `🔍 All Products (${products.length})` : `✓ ${filterProducts.size} selected`} ▾
+     {filterProducts.size === 0 ? `🔍 All Products (${groups.length})` : `✓ ${filterProducts.size} selected`} ▾
     </button>
     {showProductDD && (
      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 300, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 28px rgba(0,0,0,0.13)', width: 300 }}>
@@ -402,35 +402,28 @@ export default function AdminProducts() {
       <div style={{ padding: '6px 12px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 8 }}>
        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#374151', cursor: 'pointer', fontWeight: 600 }}>
         <input type="checkbox"
-         checked={filterProducts.size === products.length && products.length > 0}
-         ref={el => { if (el) el.indeterminate = filterProducts.size > 0 && filterProducts.size < products.length; }}
-         onChange={e => setFilterProducts(e.target.checked ? new Set(products.map(p => p._id)) : new Set())}
+         checked={filterProducts.size === groups.length && groups.length > 0}
+         ref={el => { if (el) el.indeterminate = filterProducts.size > 0 && filterProducts.size < groups.length; }}
+         onChange={e => setFilterProducts(e.target.checked ? new Set(groups) : new Set())}
          style={{ accentColor: '#1a3a6b', cursor: 'pointer', width: 14, height: 14 }} />
-        Select all ({products.length})
+        Select all ({groups.length})
        </label>
        {filterProducts.size > 0 && <span style={{ fontSize: 11, color: '#6b7280', marginLeft: 'auto' }}>{filterProducts.size} selected</span>}
       </div>
-      {/* Product list */}
+      {/* Product list — unique group names only */}
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-       {products
-        .filter((p, idx, arr) => arr.findIndex(x => norm(x.group) === norm(p.group) && norm(x.make||'') === norm(p.make||'') && norm(x.coo||'') === norm(p.coo||'')) === idx)
-        .filter(p => !productSearch || [p.group, p.make||'', p.coo||'', p.grade||''].join(' ').toLowerCase().includes(productSearch.toLowerCase()))
-        .map(p => {
-         const ids = products.filter(x => norm(x.group) === norm(p.group) && norm(x.make||'') === norm(p.make||'') && norm(x.coo||'') === norm(p.coo||'')).map(x => x._id);
-         const checked = ids.some(id => filterProducts.has(id));
+       {groups
+        .filter(g => !productSearch || g.toLowerCase().includes(productSearch.toLowerCase()))
+        .map(g => {
+         const checked = filterProducts.has(g);
          return (
-          <label key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: checked ? '#f0f5ff' : 'transparent', borderBottom: '1px solid #f9fafb' }}
+          <label key={g} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: checked ? '#f0f5ff' : 'transparent', borderBottom: '1px solid #f9fafb' }}
            onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#f8faff'; }}
            onMouseLeave={e => { e.currentTarget.style.background = checked ? '#f0f5ff' : 'transparent'; }}>
            <input type="checkbox" checked={checked}
-            onChange={() => setFilterProducts(prev => { const n = new Set(prev); checked ? ids.forEach(id => n.delete(id)) : ids.forEach(id => n.add(id)); return n; })}
+            onChange={() => setFilterProducts(prev => { const n = new Set(prev); checked ? n.delete(g) : n.add(g); return n; })}
             style={{ accentColor: '#1a3a6b', cursor: 'pointer', flexShrink: 0, width: 14, height: 14 }} />
-           <span style={{ minWidth: 0 }}>
-            <span style={{ color: checked ? '#1a3a6b' : '#1f2937', fontWeight: checked ? 700 : 500 }}>{p.group}</span>
-            {p.make ? <span style={{ color: '#6b7280' }}> · {p.make}</span> : ''}
-            {p.coo ? <span style={{ color: '#9ca3af', fontSize: 11 }}> ({p.coo})</span> : ''}
-            {p.grade ? <span style={{ color: '#9ca3af', fontSize: 11 }}> · {p.grade}</span> : ''}
-           </span>
+           <span style={{ color: checked ? '#1a3a6b' : '#1f2937', fontWeight: checked ? 700 : 500 }}>{g}</span>
           </label>
          );
         })}
