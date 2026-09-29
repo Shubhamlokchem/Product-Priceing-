@@ -103,19 +103,34 @@ export default function AdminProducts() {
  if (preserve) scrollRef.current = window.scrollY;
  setLoading(true); setMsg(null);
  try {
- const [prodRes, priceRes, grpRes] = await Promise.all([
+ const [prodRes, priceRes, grpRes, latestRes] = await Promise.all([
  api.get('/products'),
  api.get(`/prices/date/${date}`),
  api.get('/products/groups'),
+ api.get('/prices/latest'),
  ]);
  setProducts(prodRes.data);
  setGroups(grpRes.data);
+
+ // Build latest price map for fallback display
+ const latestMap = {};
+ latestRes.data.forEach(e => {
+  latestMap[e.product._id] = { price: e.price ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
+ });
 
  const pm = {}, om = {};
  priceRes.data.forEach(e => {
  pm[e.product._id] = { price: e.price ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
  om[e.product._id] = e.price;
  });
+
+ // For products with no price today, show latest price as read-only reference
+ prodRes.data.forEach(p => {
+  if (!pm[p._id] && latestMap[p._id]) {
+   pm[p._id] = { ...latestMap[p._id], isLatest: true };
+  }
+ });
+
  setPriceMap(pm);
  setOrigMap(om);
  setEditMap({});
@@ -231,9 +246,8 @@ export default function AdminProducts() {
  // Save price for a single row
  const saveRowPrice = async (productId) => {
  const raw = priceMap[productId]?.price;
- if (raw === '' || raw === undefined) { setMsg({ type: 'error', text: 'Enter a price first.' }); return; }
  try {
-  await api.post('/prices', { productId, price: parseFloat(raw), notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
+  await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
   setMsg({ type: 'success', text: 'Price saved!' });
   loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Save failed' }); }
@@ -767,6 +781,8 @@ export default function AdminProducts() {
  <input type="number" step="0.01" min="0" className="price-input"
  placeholder="—"
  value={priceMap[p._id]?.price ?? ''}
+ title={priceMap[p._id]?.isLatest ? `Last price: ₹${priceMap[p._id]?.price} (${fmtDate(priceMap[p._id]?.updatedAt || priceMap[p._id]?.entryDate)})` : ''}
+ style={{ borderColor: priceMap[p._id]?.isLatest ? '#fbbf24' : undefined, background: priceMap[p._id]?.isLatest ? '#fffbeb' : undefined }}
  onChange={e => handlePrice(p._id, 'price', e.target.value)} />
  </td>
  {/* EX location — always editable */}
@@ -785,8 +801,9 @@ export default function AdminProducts() {
  onChange={e => handlePrice(p._id, 'notes', e.target.value)} />
  </td>
  {/* Last updated — show updatedAt if available, else entry date */}
- <td style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 600 }}>
+ <td style={{ fontSize: 13, whiteSpace: 'nowrap', textAlign: 'center', fontWeight: 600, color: priceMap[p._id]?.isLatest ? '#b45309' : '#6b7280' }}>
   {fmtDate(priceMap[p._id]?.updatedAt || priceMap[p._id]?.entryDate) || '—'}
+  {priceMap[p._id]?.isLatest && <span style={{ fontSize: 10, marginLeft: 3, color: '#b45309' }}>↑prev</span>}
  </td>
  {/* Actions */}
  <td>
