@@ -723,28 +723,6 @@ export default function AdminProducts() {
   )}
 
   {/* Product + Price table grouped */}
-  {(() => {
-   // Status per product for the selected date
-   const hasPrice = p => { const v = priceMap[p._id]?.price; return v !== '' && v !== undefined && v !== null; };
-   const todayP = p => hasPrice(p) && !priceMap[p._id]?.isLatest;
-   const oldP = p => hasPrice(p) && priceMap[p._id]?.isLatest;
-   const all = Object.values(grouped).flat();
-   const nToday = all.filter(todayP).length, nOld = all.filter(oldP).length, nNone = all.length - nToday - nOld;
-   const allOpen = Object.keys(grouped).length > 0 && Object.keys(grouped).every(g => expandedGroups.has(g));
-   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 11, color: '#6b7280', margin: '0 2px 8px', flexWrap: 'wrap' }}>
-     <span><b style={{ color: '#1a3a6b' }}>{Object.keys(grouped).length}</b> products · <b style={{ color: '#1a3a6b' }}>{all.length}</b> variants</span>
-     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#16a34a', display: 'inline-block' }} />Priced on {date}: <b style={{ color: '#16a34a' }}>{nToday}</b></span>
-     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#e8a020', display: 'inline-block' }} />Older price: <b style={{ color: '#b45309' }}>{nOld}</b></span>
-     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><i style={{ width: 8, height: 8, borderRadius: 99, background: '#cbd5e1', display: 'inline-block' }} />No price: <b>{nNone}</b></span>
-     <div style={{ flex: 1 }} />
-     <button onClick={() => setExpandedGroups(allOpen ? new Set() : new Set(Object.keys(grouped)))}
-      style={{ fontSize: 11, color: '#1a3a6b', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, textDecoration: 'underline' }}>
-      {allOpen ? 'Collapse all' : 'Expand all'}
-     </button>
-    </div>
-   );
-  })()}
   {loading && products.length === 0 ? <div className="spinner">Loading...</div> : (
   Object.entries(grouped).map(([group, items]) => {
   const isOpen = expandedGroups.has(group);

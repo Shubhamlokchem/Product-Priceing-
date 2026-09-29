@@ -29,9 +29,9 @@ export default function LoginPage() {
  <div className="auth-bg">
  <div className="auth-card">
  <div className="auth-logo">
- <div className="logo-icon">₹</div>
- <h1>PricingHub</h1>
- <p>Product Pricing Dashboard</p>
+ <img src="/logo.png" alt="Lok Chemicals" className="auth-logo-img" style={{ maxHeight: 90 }} />
+ <h1>Lok Chemicals</h1>
+ <p>Pricing CRM Dashboard</p>
  </div>
  <form onSubmit={submit}>
  <div className="form-group">

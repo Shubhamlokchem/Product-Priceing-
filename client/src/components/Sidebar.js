@@ -8,6 +8,13 @@ export default function Sidebar({ links }) {
  return (
  <aside className="sidebar">
  <div className="sidebar-header">
+ <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '0 4px 12px' }}>
+  <img src="/logo.png" alt="Lok Chemicals" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
+  <div style={{ lineHeight: 1.15 }}>
+   <div style={{ fontSize: 14, fontWeight: 800, color: '#0b4a9a', letterSpacing: 0.2 }}>Lok Chemicals</div>
+   <div style={{ fontSize: 10, color: '#8a99b3', fontWeight: 600 }}>Pricing CRM</div>
+  </div>
+ </div>
  <div className="sidebar-user-only">
  <div className="user-avatar">{user?.name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()}</div>
  <div>
