@@ -76,7 +76,7 @@ export default function AdminProducts() {
  const [productSearch, setProductSearch] = useState('');
  const [showAddForm, setShowAddForm] = useState(false);
  const [addForm, setAddForm] = useState(EMPTY);
- const [newGroupMode, setNewGroupMode] = useState(false);
+ const [, setNewGroupMode] = useState(false);
  const [expandedGroups, setExpandedGroups] = useState(new Set());
  const [addingInGroup, setAddingInGroup] = useState(null); // group name being added to
  const [inlineForm, setInlineForm] = useState({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' });
@@ -756,7 +756,7 @@ export default function AdminProducts() {
    <div style={{ marginBottom: 14, border: '1.5px solid #c7d7fa', borderRadius: 10, padding: '12px 16px', background: '#f8faff' }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
      <div style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New Product</div>
-     <span style={{ fontSize: 11, color: '#9ca3af' }}>Add one below, or upload many at once from a CSV file</span>
+     <span style={{ fontSize: 11, color: '#9ca3af' }}>Type a new product below, or add many at once with Bulk Import</span>
      <div style={{ flex: 1 }} />
      <button type="button" onClick={downloadSampleCSV}
       style={{ padding: '5px 10px', background: '#faf5ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
@@ -769,21 +769,9 @@ export default function AdminProducts() {
     </div>
     <form onSubmit={submitAdd}>
      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-      {/* Group */}
-      <div style={{ display: 'flex', gap: 5 }}>
-       {newGroupMode
-        ? <input value={addForm.group} onChange={e => setAddForm(f => ({ ...f, group: e.target.value }))} placeholder="New group name" required
-           style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 150 }} />
-        : <select value={addForm.group} onChange={e => setAddForm(f => ({ ...f, group: e.target.value }))} required
-           style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, minWidth: 150 }}>
-           <option value="">Group *</option>
-           {groups.map(g => <option key={g} value={g}>{g}</option>)}
-          </select>}
-       <button type="button" onClick={() => { setNewGroupMode(v => !v); setAddForm(f => ({ ...f, group: '' })); }}
-        style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 11, background: '#fff', cursor: 'pointer', whiteSpace: 'nowrap', color: '#1a3a6b', fontWeight: 600 }}>
-        {newGroupMode ? 'Existing' : '+ New'}
-       </button>
-      </div>
+      {/* Product name — always typed (new product) */}
+      <input value={addForm.group} onChange={e => setAddForm(f => ({ ...f, group: e.target.value }))} placeholder="Product name *" required
+       style={{ padding: '6px 9px', border: '1.5px solid #1a6db5', borderRadius: 7, fontSize: 12, width: 190, fontWeight: 600 }} />
       {[['make','Make'],['coo','COO'],['grade','Grade'],['purity','Purity'],['itemPackage','Pkg']].map(([field, label]) => (
        <input key={field} value={addForm[field]} onChange={e => setAddForm(f => ({ ...f, [field]: e.target.value }))}
         placeholder={label} style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 80 }} />
