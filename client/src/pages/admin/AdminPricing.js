@@ -32,7 +32,7 @@ function PriceTicker({ items }) {
  if (!priced.length) return null;
  const text = priced.map(i => `${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`).join('   •   ');
  return (
-  <div style={{ background: '#e8a020', color: '#1a3a6b', padding: '8px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 13, fontWeight: 700 }}>
+  <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
    <div style={{ display: 'inline-block', animation: 'ticker 50s linear infinite', paddingLeft: '100%' }}>
     {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
    </div>
@@ -233,11 +233,11 @@ export default function AdminPricing() {
   // Fixed 5 columns × 3 rows
   const TV_COLS = 5;
   const TV_ROWS = 3;
-  const GAP = 6;
-  const TOP_BAR_H = 56;
-  const TICKER_H  = 38;
-  const DOTS_H    = 22;
-  const PAD_V     = 8;
+  const GAP = 8;
+  const TOP_BAR_H = 70;
+  const TICKER_H  = 40;
+  const DOTS_H    = 24;
+  const PAD_V     = 16;
   const cardsPerPage = TV_COLS * TV_ROWS; // exactly 15 cards per page
   const availH = window.innerHeight - TOP_BAR_H - TICKER_H - DOTS_H - PAD_V;
 
@@ -249,52 +249,64 @@ export default function AdminPricing() {
   const totalPages = pages.length;
   const curPage = totalPages > 0 ? tvPage % totalPages : 0;
   const pageGroups = pages[curPage] || [];
-  // Progress bar width
   const progressPct = ((TV_PAGE_SEC - tvCountdown) / TV_PAGE_SEC) * 100;
+  const liveCount = latestItems.filter(i => i.price !== null).length;
+  const navBtn = { width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 
   return (
-   <div style={{ position: 'fixed', inset: 0, background: '#1e2d45', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
+   <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #123a78 0%, #0a1f45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
 
     {/* ── Top bar ── */}
-    <div style={{ background: '#1a3a6b', borderBottom: '3px solid #e8a020' }}>
-     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 16px' }}>
-      <div>
-       <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>Live Product Prices</div>
-       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 1, display: 'flex', gap: 10, alignItems: 'center' }}>
-        <span>{date}</span><span>•</span>
-        <span style={{ color: '#4ade80', fontWeight: 600 }}>● {latestItems.filter(i => i.price !== null).length} Live</span><span>•</span>
-        <span style={{ color: countdown <= 10 ? '#fca5a5' : 'rgba(255,255,255,0.5)' }}>↻ {countdown}s</span>
+    <div style={{ height: TOP_BAR_H, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0b3f8c 60%, #1d6fd1)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', position: 'relative' }}>
+     <div style={{ height: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+       <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+        <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
+       </div>
+       <div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4, lineHeight: 1.1 }}>
+         Live Product Prices <span style={{ fontSize: 13, fontWeight: 700, color: '#7dd3fc', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 5 }}>
+         <span style={{ fontSize: 12, color: '#e0f2fe', background: 'rgba(255,255,255,0.12)', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>{date}</span>
+         <span style={{ fontSize: 12, color: '#052e16', background: '#4ade80', padding: '2px 10px', borderRadius: 99, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: '#052e16', animation: 'tvpulse 1.4s infinite' }} />{liveCount} LIVE
+         </span>
+         <span style={{ fontSize: 12, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontWeight: 600 }}>↻ {countdown}s</span>
+        </div>
        </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-       {/* Page indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
        {totalPages > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-         <button onClick={() => { setTvPage(p => (p - 1 + totalPages) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
-          style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
-         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: 600, minWidth: 40, textAlign: 'center' }}>{curPage + 1} / {totalPages}</span>
-         <button onClick={() => { setTvPage(p => (p + 1) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
-          style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
-         <span style={{ fontSize: 11, color: '#e8a020', fontWeight: 700 }}>{tvCountdown}s</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.18)', padding: '5px 10px', borderRadius: 99 }}>
+         <button onClick={() => { setTvPage(p => (p - 1 + totalPages) % totalPages); setTvCountdown(TV_PAGE_SEC); }} style={navBtn}>‹</button>
+         <span style={{ fontSize: 14, color: '#fff', fontWeight: 700, minWidth: 54, textAlign: 'center' }}>Page {curPage + 1}/{totalPages}</span>
+         <button onClick={() => { setTvPage(p => (p + 1) % totalPages); setTvCountdown(TV_PAGE_SEC); }} style={navBtn}>›</button>
+         <span style={{ fontSize: 12, color: '#fcd34d', fontWeight: 800, minWidth: 26 }}>{tvCountdown}s</span>
         </div>
        )}
        <LiveClock />
-       <button onClick={() => setTvMode(false)} style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 7, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Exit</button>
+       <button onClick={() => setTvMode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
       </div>
      </div>
-     {/* Progress bar */}
-     {totalPages > 1 && (
-      <div style={{ height: 3, background: 'rgba(255,255,255,0.1)' }}>
-       <div style={{ height: '100%', background: '#e8a020', width: `${progressPct}%`, transition: 'width 1s linear' }} />
-      </div>
-     )}
+     {/* Page progress */}
+     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
+      {totalPages > 1 && <div style={{ height: '100%', background: 'linear-gradient(90deg,#38bdf8,#fcd34d)', width: `${progressPct}%`, transition: 'width 1s linear' }} />}
+     </div>
     </div>
 
     {/* ── 5 × 3 Grid ── */}
-    <div style={{ padding: `${PAD_V/2}px 8px` }}>
+    <div style={{ flex: 1, padding: `${PAD_V / 2}px 10px`, minHeight: 0 }}>
      {allGroups.length === 0
-      ? <div style={{ textAlign: 'center', marginTop: 80, color: '#9ca3af', fontSize: 16 }}>No prices available</div>
-      : <>
+      ? (
+       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#93c5fd' }}>
+        <div style={{ width: 90, height: 90, background: '#fff', borderRadius: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.9 }}>
+         <img src="/logo.png" alt="" style={{ width: 72 }} />
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#e0f2fe' }}>No prices available</div>
+        <div style={{ fontSize: 14, color: '#7dd3fc' }}>Prices will appear here automatically as soon as they are updated.</div>
+       </div>
+      ) : <>
        <div style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${TV_COLS}, 1fr)`,
@@ -303,37 +315,38 @@ export default function AdminPricing() {
         height: availH,
        }}>
         {pageGroups.map(([group, gItems]) => (
-         <div key={group} style={{ display: 'flex', flexDirection: 'column', background: '#f5f7fa', borderRadius: 8, overflow: 'hidden', border: '1px solid #dde3ec' }}>
+         <div key={group} style={{ display: 'flex', flexDirection: 'column', background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', minHeight: 0 }}>
           {/* Header */}
-          <div style={{ flexShrink: 0, background: '#e8ecf2', padding: '6px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #dde3ec' }}>
-           <span style={{ fontWeight: 700, color: '#1e2d45', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
-           <span style={{ flexShrink: 0, fontSize: 10, color: '#4a5568', background: 'rgba(0,0,0,0.08)', padding: '1px 6px', borderRadius: 99, fontWeight: 700, marginLeft: 6 }}>{gItems.length}</span>
+          <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '7px 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+           <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
+           <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
           </div>
           {/* Product rows — equal height */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
            {gItems.map((item, idx) => (
-            <div key={item.product._id} style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 10px', borderBottom: idx < gItems.length - 1 ? '1px solid #dde3ec' : 'none', gap: 6, minHeight: 0, overflow: 'hidden', background: idx % 2 === 0 ? 'transparent' : 'rgba(0,0,0,0.04)' }}>
-             {/* Name + COO */}
+            <div key={item.product._id} style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 11px', borderBottom: idx < gItems.length - 1 ? '1px solid #e6edf7' : 'none', gap: 8, minHeight: 0, overflow: 'hidden', background: idx % 2 === 0 ? '#ffffff' : '#f3f7fd' }}>
+             {/* Name + details */}
              <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, color: '#1e2d45', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.4 }}>
+              <div style={{ fontSize: 14, color: '#0f1f3d', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
                {item.product.make || '—'}
-               {item.product.coo ? <span style={{ color: '#64748b', fontWeight: 700, fontSize: 11 }}> · {item.product.coo}</span> : ''}
+               {item.product.coo ? <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}> · {item.product.coo}</span> : ''}
               </div>
               {(item.product.grade || item.product.purity || item.product.itemPackage || item.ex || item.notes) && (
-               <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap', overflow: 'hidden' }}>
-                {item.product.grade && <span style={{ fontSize: 9, fontWeight: 700, color: '#7c3aed', background: '#ede9fe', padding: '1px 5px', borderRadius: 4 }}>{item.product.grade}</span>}
-                {item.product.purity && <span style={{ fontSize: 9, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '1px 5px', borderRadius: 4 }}>{item.product.purity}</span>}
-                {item.product.itemPackage && <span style={{ fontSize: 9, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '1px 5px', borderRadius: 4 }}>{item.product.itemPackage}</span>}
-                {item.ex && <span style={{ fontSize: 9, fontWeight: 700, color: '#2563eb', letterSpacing: 0.3, textTransform: 'uppercase' }}>EX {item.ex}</span>}
-                {item.notes && <span style={{ fontSize: 9, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 80 }}>{item.notes}</span>}
+               <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginTop: 1 }}>
+                {item.product.grade && <span style={{ fontSize: 10, fontWeight: 700, color: '#6d28d9', background: '#ede9fe', padding: '0 6px', borderRadius: 4 }}>{item.product.grade}</span>}
+                {item.product.purity && <span style={{ fontSize: 10, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0 6px', borderRadius: 4 }}>{item.product.purity}</span>}
+                {item.product.itemPackage && <span style={{ fontSize: 10, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '0 6px', borderRadius: 4 }}>{item.product.itemPackage}</span>}
+                {item.ex && <span style={{ fontSize: 10, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase' }}>EX {item.ex}</span>}
+                {item.notes && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 90 }}>{item.notes}</span>}
                </div>
               )}
              </div>
-             {/* Unit · Price · Date — right side, all on one line */}
-             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
-              <span style={{ fontSize: 12, color: '#0284c7', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>{item.product.unit}</span>
-              <span style={{ fontSize: 16, fontWeight: 800, color: '#16a34a', letterSpacing: -0.5 }}>₹{item.price.toLocaleString()}</span>
-              <span style={{ fontSize: 12, color: '#b45309', fontWeight: 700, marginLeft: 3, letterSpacing: 0.2 }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
+             {/* Price block */}
+             <div style={{ flexShrink: 0, textAlign: 'right', lineHeight: 1.15 }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap' }}>
+               ₹{item.price.toLocaleString()}<span style={{ fontSize: 11, color: '#0369a1', fontWeight: 800, marginLeft: 2 }}>/{item.product.unit}</span>
+              </div>
+              <div style={{ fontSize: 10, color: '#b45309', fontWeight: 700 }}>{fmtDate(item.updatedAt || item.date) || ''}</div>
              </div>
             </div>
            ))}
@@ -341,12 +354,12 @@ export default function AdminPricing() {
          </div>
         ))}
        </div>
-       {/* Page dots — fixed at bottom */}
+       {/* Page dots */}
        {totalPages > 1 && (
-        <div style={{ flexShrink: 0, display: 'flex', justifyContent: 'center', gap: 6, padding: '6px 0 2px' }}>
+        <div style={{ height: DOTS_H, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
          {Array.from({ length: totalPages }).map((_, i) => (
           <button key={i} onClick={() => { setTvPage(i); setTvCountdown(TV_PAGE_SEC); }}
-           style={{ width: i === curPage ? 24 : 8, height: 8, borderRadius: 4, background: i === curPage ? '#1a3a6b' : '#c7d7fa', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
+           style={{ width: i === curPage ? 26 : 9, height: 9, borderRadius: 5, background: i === curPage ? '#38bdf8' : 'rgba(186,230,253,0.35)', border: 'none', cursor: 'pointer', transition: 'all 0.3s', padding: 0 }} />
          ))}
         </div>
        )}
@@ -354,9 +367,11 @@ export default function AdminPricing() {
     </div>
 
     {/* ── Ticker ── */}
-    <div style={{ background: '#e8a020', borderTop: '2px solid #d4900e' }}>
-     <PriceTicker items={latestItems} />
+    <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
     </div>
+    <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
    </div>
   );
  }
