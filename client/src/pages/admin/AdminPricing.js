@@ -119,7 +119,8 @@ export default function AdminPricing() {
  const [filterProducts, setFilterProducts] = useState(new Set());
  const [showProductDD, setShowProductDD] = useState(false);
  const [productSearch, setProductSearch] = useState('');
- const [tvMode, setTvMode] = useState(false);
+ const [tvMode, setTvMode] = useState(false);   // TV 1: Price Board
+ const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Market Board (content to be defined)
  const [tvPage, setTvPage] = useState(0);
  const TV_PAGE_SEC = 20;        // seconds before auto-advance
  const [tvCountdown, setTvCountdown] = useState(TV_PAGE_SEC);
@@ -212,6 +213,33 @@ export default function AdminPricing() {
  }, {});
 
  const pricedCount = displayItems.filter(i => i.price !== null).length;
+
+ /* ══ TV 2: MARKET BOARD (placeholder — content to be defined) ══ */
+ if (tv2Mode) {
+  return (
+   <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #0e5a78 0%, #0a2a45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
+    <div style={{ height: 70, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0e7490 60%, #38bdf8)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
+     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+       <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4 }}>
+       Market Board <span style={{ fontSize: 13, fontWeight: 700, color: '#bae6fd', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
+      </div>
+     </div>
+     <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <LiveClock />
+      <button onClick={() => setTv2Mode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
+     </div>
+    </div>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#bae6fd' }}>
+     <div style={{ fontSize: 48 }}>📊</div>
+     <div style={{ fontSize: 22, fontWeight: 700, color: '#e0f2fe' }}>Market Board</div>
+     <div style={{ fontSize: 14 }}>Coming soon</div>
+    </div>
+   </div>
+  );
+ }
 
  /* ══ TV MODE ══ */
  if (tvMode) {
@@ -432,10 +460,14 @@ export default function AdminPricing() {
     {/* Refresh */}
     <button onClick={loadData} style={{ padding: '6px 12px', background: '#f0f5ff', color: '#1a3a6b', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>↻ Refresh</button>
 
-    {/* TV button */}
-    <button onClick={() => setTvMode(true)}
-     style={{ padding: '6px 14px', background: 'linear-gradient(135deg,#1a3a6b,#2558a8)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(26,58,107,0.25)' }}>
-     TV
+    {/* TV buttons */}
+    <button onClick={() => setTvMode(true)} title="Full-screen live price board"
+     style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0b3f8c,#1d6fd1)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(11,63,140,0.25)', whiteSpace: 'nowrap' }}>
+     📺 Price Board
+    </button>
+    <button onClick={() => setTv2Mode(true)} title="Second full-screen TV board"
+     style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0e7490,#38bdf8)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(14,116,144,0.25)', whiteSpace: 'nowrap' }}>
+     📊 Market Board
     </button>
    </div>
    </div>{/* /sticky-page-header */}
