@@ -373,7 +373,7 @@ export default function AdminPricing() {
   const availH = window.innerHeight - TOP_BAR_H - TICKER_H - DOTS_H - PAD_V;
 
   // Card height depends on its rows → pack cards into 5 columns, new page when full
-  const HEAD_H = 34, ROW_H = 32, ROW_H2L = 44;   // row grows to 2 lines when text needs it
+  const HEAD_H = 32, ROW_H = 28, ROW_H2L = 40;   // row grows to 2 lines when text needs it
   let COLHDR_H1 = 22;
   let rowHOf = () => ROW_H;
   const cardH = gItems => HEAD_H + COLHDR_H1 + gItems.reduce((h, it) => h + rowHOf(it), 0) + 2;
@@ -418,24 +418,29 @@ export default function AdminPricing() {
   COLHDR_H1 = DEF1.some((d, i) => hdrW(d.h) > colPx[i]) ? 30 : 22;
   rowHOf = it => (DEF1.some((d, i) => tw(String(d.get(it) || '—').toUpperCase(), d.h === 'MAKE' ? F_MAKE : F_ROW) > colPx[i]) ? ROW_H2L : ROW_H);
 
-  // Pack cards into 2 columns (shortest column first); new page when neither column has room
-  const pages = [];
-  let cols2c = null, hts = null;
-  const newPage = () => { cols2c = [[], []]; hts = [0, 0]; pages.push(cols2c); };
-  allGroups.forEach(entry => {
-   const h = Math.min(availH, cardH(entry[1]));
-   if (!cols2c) newPage();
-   const order = hts[0] <= hts[1] ? [0, 1] : [1, 0];
-   let placed = false;
-   for (const c of order) {
-    if (hts[c] + (hts[c] ? GAP : 0) + h <= availH) { cols2c[c].push(entry); hts[c] += (hts[c] ? GAP : 0) + h; placed = true; break; }
-   }
-   if (!placed) { newPage(); cols2c[0].push(entry); hts[0] = h; }
+  // Fixed grid: 2 columns × 3 rows of equal-size cards (6 per page).
+  // A product with more variants than one card holds continues on the next card: "(1/2)", "(2/2)".
+  const GRID_COLS = 2, GRID_ROWS = 3;
+  const cellH = Math.floor((availH - GAP * (GRID_ROWS - 1)) / GRID_ROWS);
+  const bodyH = cellH - HEAD_H - COLHDR_H1 - 2;
+  const chunks = [];
+  allGroups.forEach(([group, gItems]) => {
+   const parts = []; let cur = [], used = 0;
+   gItems.forEach(it => {
+    const h = rowHOf(it);
+    if (cur.length && used + h > bodyH) { parts.push(cur); cur = []; used = 0; }
+    cur.push(it); used += h;
+   });
+   if (cur.length) parts.push(cur);
+   parts.forEach((items, i) => chunks.push({ key: `${group}#${i}`, group, items, total: gItems.length, part: parts.length > 1 ? `${i + 1}/${parts.length}` : '' }));
   });
+  const perPage1 = GRID_COLS * GRID_ROWS;
+  const pages = [];
+  for (let i = 0; i < chunks.length; i += perPage1) pages.push(chunks.slice(i, i + perPage1));
 
   const totalPages = pages.length;
   const curPage = totalPages > 0 ? tvPage % totalPages : 0;
-  const pageCols1 = pages[curPage] || [];
+  const pageCards1 = pages[curPage] || [];
   const progressPct = ((TV_PAGE_SEC - tvCountdown) / TV_PAGE_SEC) * 100;
   const liveCount = latestItems.filter(i => i.price !== null).length;
   const navBtn = { width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
@@ -494,15 +499,13 @@ export default function AdminPricing() {
         <div style={{ fontSize: 14, color: '#7dd3fc' }}>Prices will appear here automatically as soon as they are updated.</div>
        </div>
       ) : <>
-       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: GAP, height: availH, alignItems: 'start', overflow: 'hidden' }}>
-        {pageCols1.map((colGroups, ci) => (
-         <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: GAP, minWidth: 0 }}>
-          {colGroups.map(([group, gItems]) => (
-           <div key={group} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', flexShrink: 0 }}>
+       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0,1fr))`, gridTemplateRows: `repeat(${GRID_ROWS}, ${cellH}px)`, gap: GAP, height: availH, overflow: 'hidden' }}>
+        {pageCards1.map(({ key, group, items: gItems, total, part }) => (
+           <div key={key} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', height: cellH, minWidth: 0 }}>
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
-             <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
+             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
+             <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{total}</span>
             </div>
             {(() => {
              const cols = DEF1, hasCost = true, hasTarget = true;
@@ -537,8 +540,6 @@ export default function AdminPricing() {
              );
             })()}
            </div>
-          ))}
-         </div>
         ))}
        </div>
        {/* Page dots */}
