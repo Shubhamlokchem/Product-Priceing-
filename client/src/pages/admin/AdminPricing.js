@@ -242,7 +242,7 @@ export default function AdminPricing() {
   const pageRows = rows2.slice(cur2 * perPage, cur2 * perPage + perPage);
   const panels = [pageRows];
   // text columns flex, short columns fixed so headers + values always show in full
-  // Column definitions — optional columns appear only if at least one product has data for them
+  // Column definitions — Board 2 shows all of them
   const DEF2 = [
    { h: 'SR NO.',  get: (it, n) => n, w: ['80px', '60px'], always: true, align: 'center', st: { color: '#fcd34d', fontWeight: 900 } },
    { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,2.4fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
@@ -258,7 +258,7 @@ export default function AdminPricing() {
    { h: 'EX',      get: it => it.ex,                  w: ['70px', '60px'],  align: 'center' },
    { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
   ];
-  const cols2 = DEF2.filter(d => d.always || rows2.some(r => d.get(r)));
+  const cols2 = DEF2; // Board 2 always shows every column (empty values show as —)
   const COLS = cols2.map(d => d.w[twoCols ? 1 : 0]).join(' ');
   const FS = twoCols ? 12 : 14;
   const mono = "'Consolas','Roboto Mono','Courier New',monospace";
