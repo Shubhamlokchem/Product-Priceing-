@@ -51,13 +51,8 @@ export default function Sidebar({ links }) {
  </nav>
 
   <div className="sidebar-user-only sidebar-user-bottom">
-   <div className="user-avatar" title={user?.name || user?.email}>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c0-4.4 3.8-7.5 8.5-7.5s8.5 3.1 8.5 7.5z"/></svg>
-   </div>
-   <div style={{ minWidth: 0, flex: 1 }}>
-    <div className="user-name">{user?.name || user?.email}</div>
-    <div className="user-role-badge">{user?.role}</div>
-   </div>
+   <div className="user-name-full" title={user?.name || user?.email}>{user?.name || user?.email}</div>
+   <div className="user-role-badge">{user?.role}</div>
    <button className="signout-icon-btn" onClick={logout} title="Sign out" aria-label="Sign out">
     <Icon>{P.logout}</Icon>
    </button>

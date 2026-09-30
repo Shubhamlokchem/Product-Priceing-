@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import '../Dashboard.css';
 
-const EMPTY = { group: '', make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' };
+const EMPTY = { group: '', make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', cost: '', price: '', target: '', notes: '', ex: '' };
 
 const norm = s => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -206,15 +206,17 @@ export default function AdminProducts() {
  try {
  const { data: newProduct } = await api.post('/products', addForm);
  // If a price was entered, save it for the selected date
- if (addForm.price && !isNaN(Number(addForm.price))) {
+ if ((addForm.price && !isNaN(Number(addForm.price))) || addForm.cost || addForm.target) {
   await api.post('/prices', {
    productId: newProduct._id,
-   price: Number(addForm.price),
+   price: addForm.price !== '' ? Number(addForm.price) : null,
+   cost: addForm.cost || null,
+   target: addForm.target || null,
    notes: addForm.notes || '',
    date
   });
  }
- setMsg({ type: 'success', text: 'Product added' + (addForm.price ? ' with price' : '') });
+ setMsg({ type: 'success', text: 'Product added' + (addForm.price || addForm.cost || addForm.target ? ' with prices' : '') });
  setAddForm(EMPTY); setShowAddForm(false); setNewGroupMode(false);
  loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Add failed' }); }
@@ -730,10 +732,16 @@ export default function AdminProducts() {
        style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 75 }}>
        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
       </select>
-      {/* Price (optional) */}
+      {/* Prices (optional): 1. Cost  2. Market  3. Target */}
+      <input value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))}
+       placeholder="Cost ₹" type="number" min="0" step="0.01"
+       style={{ padding: '6px 9px', border: '1.5px solid #cbd5e1', borderRadius: 7, fontSize: 12, width: 85 }} />
       <input value={addForm.price} onChange={e => setAddForm(f => ({ ...f, price: e.target.value }))}
-       placeholder="Price ₹" type="number" min="0" step="0.01"
+       placeholder="Market ₹" type="number" min="0" step="0.01"
        style={{ padding: '6px 9px', border: '1.5px solid #f59e0b', borderRadius: 7, fontSize: 12, width: 90, background: '#fffbeb' }} />
+      <input value={addForm.target} onChange={e => setAddForm(f => ({ ...f, target: e.target.value }))}
+       placeholder="Target ₹" type="number" min="0" step="0.01"
+       style={{ padding: '6px 9px', border: '1.5px solid #c4b5fd', borderRadius: 7, fontSize: 12, width: 85 }} />
       {/* Notes (optional) */}
       <input value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
        placeholder="Note"

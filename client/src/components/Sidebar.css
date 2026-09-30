@@ -215,3 +215,13 @@
 .nav-link .nav-icon { color: #fff; }
 .nav-link.active .nav-icon { color: #fff; }
 .sidebar { -webkit-font-smoothing: antialiased; }
+
+/* Bottom card: full name · role badge · sign-out in one row */
+.sidebar-user-bottom { gap: 8px; padding: 9px 10px; }
+.user-name-full {
+  flex: 1; min-width: 0;
+  font-size: 13px; font-weight: 700; color: #fff;
+  line-height: 1.2; word-break: break-word;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+.sidebar-user-bottom .user-role-badge { margin-top: 0; flex-shrink: 0; }

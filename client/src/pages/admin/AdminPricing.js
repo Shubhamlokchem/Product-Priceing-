@@ -79,7 +79,7 @@ function GroupRow({ group, groupItems }) {
     <div className="table-wrap">
      <table>
       <thead>
-       <tr><th>Make</th><th>COO</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th><th>Price (₹)</th><th>Notes</th><th>Updated</th></tr>
+       <tr><th>Make</th><th>COO</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th><th style={{ color: '#64748b' }}>Cost (₹)</th><th style={{ color: '#e8a020' }}>Market (₹)</th><th style={{ color: '#7c3aed' }}>Target (₹)</th><th>Notes</th><th>Updated</th></tr>
       </thead>
       <tbody>
        {groupItems.map(item => (
@@ -90,10 +90,12 @@ function GroupRow({ group, groupItems }) {
          <td style={{ verticalAlign: 'middle' }}>{item.product.purity || '—'}</td>
          <td style={{ fontSize: 11, verticalAlign: 'middle' }}>{item.product.itemPackage || '—'}</td>
          <td style={{ verticalAlign: 'middle' }}>{item.product.unit}</td>
+         <td style={{ verticalAlign: 'middle', color: '#475569', fontWeight: 600 }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : <span className="no-price">—</span>}</td>
          <td style={{ verticalAlign: 'middle' }}>{item.price !== null
           ? <span className="price-highlight">₹{item.price.toLocaleString()}<span className="currency">/{item.product.unit}</span></span>
           : <span className="no-price">—</span>}
          </td>
+         <td style={{ verticalAlign: 'middle', color: '#7c3aed', fontWeight: 600 }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : <span className="no-price">—</span>}</td>
          <td style={{ fontSize: 11, color: '#6b7280', verticalAlign: 'middle' }}>{item.notes || '—'}</td>
          <td style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', fontWeight: 600, verticalAlign: 'middle', textAlign: 'center' }}>{fmtDate(item.updatedAt || item.date) || '—'}</td>
         </tr>
@@ -188,13 +190,13 @@ export default function AdminPricing() {
  const toggleProduct = id => setFilterProducts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
  const exportPrices = () => {
-  const headers = ['group','make','coo','grade','purity','package','unit','price','notes','ex','date'];
+  const headers = ['group','make','coo','grade','purity','package','unit','cost','market','target','notes','ex','date'];
   const rows = displayItems
    .filter(i => i.price !== null)
    .map(i => [
     i.product.group, i.product.make||'', i.product.coo||'', i.product.grade||'',
     i.product.purity||'', i.product.itemPackage||'', i.product.unit||'',
-    i.price, i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
+    i.cost ?? '', i.price, i.target ?? '', i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
    ]);
   const lines = [headers, ...rows].map(r =>
    r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
@@ -242,6 +244,7 @@ export default function AdminPricing() {
   // text columns flex, short columns fixed so headers + values always show in full
   // Column definitions — optional columns appear only if at least one product has data for them
   const DEF2 = [
+   { h: 'SR NO.',  get: (it, n) => n, w: ['80px', '60px'], always: true, align: 'center', st: { color: '#fcd34d', fontWeight: 900 } },
    { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,2.4fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
    { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a' } },
    { h: 'COO',     get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
@@ -309,6 +312,7 @@ export default function AdminPricing() {
        {/* Rows */}
        {pRows.map((it, ri) => {
         const isToday = it.date === today;
+        const srNo = cur2 * perPage + ri + 1;   // continues across screens
         return (
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
           {cols2.map(d => (
@@ -316,7 +320,7 @@ export default function AdminPricing() {
             style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 900, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
-            {d.get(it) || '—'}
+            {d.get(it, srNo) || '—'}
            </div>
           ))}
          </div>

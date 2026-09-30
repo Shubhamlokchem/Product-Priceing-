@@ -52,58 +52,74 @@ const BUBBLES = Array.from({ length: 16 }, (_, i) => ({
 }));
 const SPARKS = [[-120, -80], [110, -95], [-150, 10], [150, 20], [-60, -140], [70, -150], [0, -170], [-100, 90], [110, 80]];
 
-/* ── The walking businessman (orange blazer + briefcase), viewBox 0 0 120 220 ── */
+/* ── The walking businessman (3D-cartoon style: orange blazer, tie, grey trousers, briefcase), viewBox 0 0 120 220 ── */
 const Person = () => (
  <svg viewBox="0 0 120 220" aria-hidden="true">
   <defs>
-   <linearGradient id="lgBlazer" x1="0" x2="1"><stop offset="0" stopColor="#f08a3c" /><stop offset=".55" stopColor="#e8742a" /><stop offset="1" stopColor="#c95d1c" /></linearGradient>
-   <linearGradient id="lgSleeve" x1="0" x2="1"><stop offset="0" stopColor="#f3954a" /><stop offset="1" stopColor="#cf6420" /></linearGradient>
-   <linearGradient id="lgPants" x1="0" x2="1"><stop offset="0" stopColor="#7b8491" /><stop offset="1" stopColor="#5b636f" /></linearGradient>
-   <radialGradient id="lgSkin" cx=".4" cy=".35" r=".75"><stop offset="0" stopColor="#fbd7b8" /><stop offset="1" stopColor="#e9b48f" /></radialGradient>
+   <linearGradient id="lgBlazer" x1="0" x2="1"><stop offset="0" stopColor="#f7a05a" /><stop offset=".45" stopColor="#ee7d32" /><stop offset="1" stopColor="#c85a18" /></linearGradient>
+   <linearGradient id="lgSleeve" x1="0" x2="1"><stop offset="0" stopColor="#f59a52" /><stop offset=".6" stopColor="#e5722a" /><stop offset="1" stopColor="#c45816" /></linearGradient>
+   <linearGradient id="lgPants" x1="0" x2="1"><stop offset="0" stopColor="#8a929c" /><stop offset=".5" stopColor="#737b86" /><stop offset="1" stopColor="#5a616b" /></linearGradient>
+   <radialGradient id="lgSkin" cx=".42" cy=".38" r=".7"><stop offset="0" stopColor="#ffe1c8" /><stop offset=".7" stopColor="#f6c7a3" /><stop offset="1" stopColor="#e9ae86" /></radialGradient>
+   <linearGradient id="lgHair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#8a5a36" /><stop offset=".6" stopColor="#6b4226" /><stop offset="1" stopColor="#4e2f1a" /></linearGradient>
    <linearGradient id="lgBag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8b5427" /><stop offset="1" stopColor="#6a3d19" /></linearGradient>
+   <linearGradient id="lgShoe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7a4a26" /><stop offset="1" stopColor="#4a2a12" /></linearGradient>
   </defs>
   <g className="lg-body">
    {/* back arm */}
    <g className="lg-arm-back">
-    <rect x="35" y="54" width="12" height="54" rx="6" fill="url(#lgSleeve)" />
-    <rect x="35.5" y="104" width="11" height="5" rx="2" fill="#f1f5f9" />
-    <circle cx="41" cy="113" r="5.5" fill="url(#lgSkin)" />
+    <path d="M36 57 q-3 25 -1 49 h11 q2 -24 0 -49 z" fill="url(#lgSleeve)" />
+    <rect x="35" y="103" width="11.5" height="5" rx="2" fill="#f1f5f9" />
+    <ellipse cx="40.8" cy="112.5" rx="5.2" ry="5.8" fill="url(#lgSkin)" />
    </g>
-   {/* legs */}
+   {/* legs (slim grey trousers + brown shoes) */}
    <g className="lg-leg-b">
-    <rect x="49" y="124" width="14" height="72" rx="6" fill="#5b636f" />
-    <path d="M47 194 h16 a6 6 0 0 1 4 6 v1 h-22 v-3 a4 4 0 0 1 2 -4z" fill="#4a2c14" />
+    <path d="M49 124 h13 l-1 72 h-11 z" fill="#646b75" />
+    <path d="M46.5 195 h15 q6 1 6.5 6 h-22.5 q-1 -4 1 -6 z" fill="url(#lgShoe)" />
    </g>
    <g className="lg-leg-a">
-    <rect x="58" y="124" width="14" height="72" rx="6" fill="url(#lgPants)" />
-    <path d="M58 194 h16 a6 6 0 0 1 4 6 v1 h-22 v-3 a4 4 0 0 1 2 -4z" fill="#5b3a1e" />
+    <path d="M58 124 h13 l-1 72 h-11 z" fill="url(#lgPants)" />
+    <path d="M65 140 v52" stroke="#5f6670" strokeWidth=".8" />
+    <path d="M57.5 195 h15 q6 1 6.5 6 h-22.5 q-1 -4 1 -6 z" fill="url(#lgShoe)" />
    </g>
-   {/* shirt + tie */}
-   <path d="M49 50 L71 50 L68 90 L52 90 Z" fill="#eef2f7" />
-   <path d="M58 52 h4 l1.5 5 -2 26 -1.5 3 -1.5 -3 -2 -26 z" fill="#374151" />
-   {/* blazer */}
-   <path d="M40 54 Q45 50 50 50 L60 92 L70 50 Q75 50 80 54 L86 130 Q72 136 62 134 L60 96 L58 134 Q48 136 34 130 Z" fill="url(#lgBlazer)" />
-   <path d="M50 50 L59 88 L53 58 L46 53 Z" fill="#d0661f" /><path d="M70 50 L61 88 L67 58 L74 53 Z" fill="#b95616" />
-   <circle cx="60" cy="102" r="1.8" fill="#6b7280" /><circle cx="60" cy="114" r="1.8" fill="#6b7280" />
-   <path d="M44 100 h9" stroke="#b95616" strokeWidth="1.5" strokeLinecap="round" />
-   {/* head */}
-   <rect x="55" y="40" width="10" height="11" rx="3" fill="#e9b48f" />
-   <ellipse cx="43.5" cy="28" rx="3" ry="4.5" fill="#e9b48f" /><ellipse cx="76.5" cy="28" rx="3" ry="4.5" fill="#e9b48f" />
-   <ellipse cx="60" cy="27" rx="16.5" ry="18" fill="url(#lgSkin)" />
-   <path d="M43.5 24 Q42 9 56 7 Q66 3 73 10 Q79 16 76.5 25 Q73 15 63 16 Q58 12 52 15 Q46 17 43.5 24 Z" fill="#6b4226" />
-   <path d="M55 8 Q62 1 70 7 Q64 6 60 10 Z" fill="#7d4f2e" />
-   <path d="M49 22 q4 -2.5 8 0" stroke="#4a2c14" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-   <path d="M63 22 q4 -2.5 8 0" stroke="#4a2c14" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-   <ellipse cx="53" cy="28" rx="3.2" ry="3.6" fill="#fff" /><ellipse cx="67" cy="28" rx="3.2" ry="3.6" fill="#fff" />
-   <circle cx="53.6" cy="28.6" r="2" fill="#3b2a1a" /><circle cx="67.6" cy="28.6" r="2" fill="#3b2a1a" />
-   <circle cx="54.2" cy="27.8" r=".7" fill="#fff" /><circle cx="68.2" cy="27.8" r=".7" fill="#fff" />
-   <path d="M59 33 q1 2 2.5 0" stroke="#d99a76" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-   <path d="M54.5 37 Q60 41.5 65.5 37" stroke="#a0522d" strokeWidth="1.6" fill="none" strokeLinecap="round" />
+   {/* neck, shirt, tie */}
+   <path d="M55 42 h10 v10 h-10 z" fill="#efb893" />
+   <path d="M48 50 L72 50 L69 94 L51 94 Z" fill="#f3f6fa" />
+   <path d="M53 49 L60 56 L55 60 Z M67 49 L60 56 L65 60 Z" fill="#e2e8f0" />
+   <path d="M58 55 h4 l1.3 4 -1.8 28 -1.5 3 -1.5 -3 -1.8 -28 z" fill="#3a4250" />
+   <path d="M58.2 55 h3.6 l.6 2 h-4.8 z" fill="#2b313c" />
+   {/* blazer (open V, lapels, buttons, pockets) */}
+   <path d="M39 55 Q45 50 51 50 L60 93 L69 50 Q75 50 81 55 L87 128 Q76 135 63 133 L60 100 L57 133 Q44 135 33 128 Z" fill="url(#lgBlazer)" />
+   <path d="M51 50 L60 93 L54 64 L46 55 Z" fill="#f59a52" /><path d="M69 50 L60 93 L66 64 L74 55 Z" fill="#c95a18" />
+   <path d="M45 56 L53 66" stroke="#d96a22" strokeWidth="1" />
+   <circle cx="61.5" cy="104" r="1.9" fill="#7c8490" /><circle cx="61.5" cy="116" r="1.9" fill="#7c8490" />
+   <path d="M38 112 h13 v3 h-13 z" fill="#d96a22" opacity=".8" /><path d="M69 112 h13 v3 h-13 z" fill="#b8520f" opacity=".8" />
+   <path d="M62 133 Q60 124 60 100" stroke="#b8520f" strokeWidth="1" fill="none" />
+   {/* head — big friendly 3D-cartoon face */}
+   <ellipse cx="40.5" cy="28" rx="3.6" ry="5" fill="#f1bd98" /><ellipse cx="79.5" cy="28" rx="3.6" ry="5" fill="#f1bd98" />
+   <path d="M41 26 Q40 45 60 47 Q80 45 79 26 Q79 8 60 8 Q41 8 41 26 Z" fill="url(#lgSkin)" />
+   {/* hair with swept-up quiff */}
+   <path d="M40.5 25 Q38 12 46 6 Q52 -1 62 0 Q72 -1 77 6 Q82 12 79.5 25 Q77 15 72 13 Q64 10 55 12 Q47 13 44 18 Q42 21 40.5 25 Z" fill="url(#lgHair)" />
+   <path d="M47 7 Q55 -5 70 0 Q62 0 57 5 Q52 8 47 7 Z" fill="#9a6a44" />
+   <path d="M52 6 Q60 1 67 4" stroke="#b07a50" strokeWidth="1" fill="none" strokeLinecap="round" />
+   {/* eyebrows (raised) */}
+   <path d="M47.5 21 q4.5 -3.5 9 -1" stroke="#5a3620" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+   <path d="M63.5 20 q4.5 -2.5 9 1" stroke="#5a3620" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+   {/* big eyes */}
+   <ellipse cx="52.5" cy="27.5" rx="4" ry="4.4" fill="#fff" /><ellipse cx="67.5" cy="27.5" rx="4" ry="4.4" fill="#fff" />
+   <circle cx="53.3" cy="28.2" r="2.6" fill="#4a3222" /><circle cx="68.3" cy="28.2" r="2.6" fill="#4a3222" />
+   <circle cx="53.3" cy="28.2" r="1.3" fill="#140c06" /><circle cx="68.3" cy="28.2" r="1.3" fill="#140c06" />
+   <circle cx="54.2" cy="27" r=".9" fill="#fff" /><circle cx="69.2" cy="27" r=".9" fill="#fff" />
+   <path d="M48.6 25.2 q3.9 -2.4 7.8 0" stroke="#5a3620" strokeWidth=".9" fill="none" />
+   <path d="M63.6 25.2 q3.9 -2.4 7.8 0" stroke="#5a3620" strokeWidth=".9" fill="none" />
+   {/* nose, cheeks, smile */}
+   <path d="M59 31 q1.2 3 2.4 0.6" stroke="#dca07c" strokeWidth="1.3" fill="none" strokeLinecap="round" />
+   <ellipse cx="48.5" cy="35" rx="3" ry="1.8" fill="#f4a58a" opacity=".45" /><ellipse cx="71.5" cy="35" rx="3" ry="1.8" fill="#f4a58a" opacity=".45" />
+   <path d="M55 38 Q60 42 65.5 37.5" stroke="#b5634a" strokeWidth="1.7" fill="none" strokeLinecap="round" />
    {/* front arm holding the briefcase */}
    <g className="lg-arm-front">
-    <rect x="73" y="54" width="12" height="54" rx="6" fill="url(#lgSleeve)" />
-    <rect x="73.5" y="104" width="11" height="5" rx="2" fill="#f8fafc" />
-    <circle cx="79.5" cy="113" r="5.5" fill="url(#lgSkin)" />
+    <path d="M74 57 q3 25 1 49 h11 q-2 -24 0 -49 z" fill="url(#lgSleeve)" />
+    <rect x="74.2" y="103" width="11.5" height="5" rx="2" fill="#f8fafc" />
+    <ellipse cx="79.8" cy="112.5" rx="5.2" ry="5.8" fill="url(#lgSkin)" />
     <g className="lg-bag">
      <path d="M78 118 v-4 a3 3 0 0 1 3 -3 h8 a3 3 0 0 1 3 3 v4" stroke="#3f2a14" strokeWidth="2.5" fill="none" />
      <rect x="72" y="124" width="26" height="20" rx="3" fill="url(#lgBag)" />
