@@ -1,0 +1,111 @@
+/* ═══════════ Lok Chemicals — animated login ═══════════ */
+.lg-bg {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.10), transparent 45%),
+    radial-gradient(ellipse at 85% 90%, rgba(134,239,172,0.18), transparent 50%),
+    linear-gradient(150deg, #1d58a8 0%, #1a6db5 40%, #11808a 75%, #0e8a6c 100%);
+}
+/* faint hexagon (benzene) pattern */
+.lg-hexgrid { position: absolute; inset: 0; opacity: 0.07; pointer-events: none; }
+
+/* floating chemistry items */
+.lg-item { position: absolute; color: #fff; opacity: 0.22; pointer-events: none; animation: lg-float var(--d, 16s) ease-in-out var(--dl, 0s) infinite; }
+.lg-formula { position: absolute; color: #fff; opacity: 0.18; font: 700 var(--fs, 20px) 'Segoe UI', sans-serif; letter-spacing: 1px; pointer-events: none; animation: lg-float var(--d, 18s) ease-in-out var(--dl, 0s) infinite; }
+@keyframes lg-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50%      { transform: translateY(-26px) rotate(var(--r, 12deg)); }
+}
+/* rising bubbles */
+.lg-bubble { position: absolute; bottom: -30px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.08); pointer-events: none; animation: lg-rise var(--d, 12s) linear var(--dl, 0s) infinite; }
+@keyframes lg-rise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  10%  { opacity: 0.8; }
+  50%  { transform: translateY(-55vh) translateX(18px); }
+  90%  { opacity: 0.6; }
+  100% { transform: translateY(-110vh) translateX(-10px); opacity: 0; }
+}
+
+/* ── stage ── */
+.lg-stage { position: relative; width: 100%; max-width: 440px; min-height: 600px; display: flex; align-items: center; justify-content: center; z-index: 2; }
+
+/* ── person ── */
+.lg-person {
+  position: absolute; left: 50%; bottom: 10px; width: 180px; margin-left: -90px;
+  animation: lg-walk-in 2s cubic-bezier(.25,.75,.35,1) forwards, lg-person-out .5s ease-in 3.2s forwards;
+  transform: translateX(-75vw);
+  z-index: 1;
+}
+.lg-person svg { width: 100%; height: auto; overflow: visible; display: block; }
+.lg-shadow { position: absolute; left: 50%; bottom: -4px; width: 110px; height: 14px; margin-left: -55px; border-radius: 50%; background: rgba(0,0,0,0.25); filter: blur(3px); }
+@keyframes lg-walk-in { from { transform: translateX(-75vw); } to { transform: translateX(0); } }
+@keyframes lg-person-out { from { transform: translateX(0); opacity: 1; } to { transform: translateX(0) translateY(12px) scale(.94); opacity: 0; } }
+
+.lg-body   { animation: lg-bob .5s ease-in-out 0s 4; }
+.lg-leg-a  { transform-origin: 60px 128px; animation: lg-swing-a .5s ease-in-out 0s 4; }
+.lg-leg-b  { transform-origin: 60px 128px; animation: lg-swing-b .5s ease-in-out 0s 4; }
+.lg-arm-back { transform-origin: 41px 58px; animation: lg-swing-b .5s ease-in-out 0s 4; }
+.lg-arm-front { transform-origin: 79px 58px; animation: lg-hold .5s ease-in-out 0s 4, lg-raise .45s ease-out 2.05s forwards; }
+.lg-bag    { transform-origin: 84px 118px; animation: lg-level .45s ease-out 2.05s forwards; }
+.lg-lid    { transform-origin: 98px 124px; animation: lg-open .4s cubic-bezier(.3,1.4,.5,1) 2.5s forwards; }
+.lg-glow   { transform-origin: 85px 122px; transform: scale(0); opacity: 0; animation: lg-glow .9s ease-out 2.6s forwards; }
+
+@keyframes lg-bob     { 0%,50%,100% { transform: translateY(0); } 25%,75% { transform: translateY(-3px); } }
+@keyframes lg-swing-a { 0%,100% { transform: rotate(0); } 25% { transform: rotate(24deg); } 75% { transform: rotate(-24deg); } }
+@keyframes lg-swing-b { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-24deg); } 75% { transform: rotate(24deg); } }
+@keyframes lg-hold    { 0%,100% { transform: rotate(0); } 25% { transform: rotate(6deg); } 75% { transform: rotate(-6deg); } }
+@keyframes lg-raise   { from { transform: rotate(0); } to { transform: rotate(-72deg); } }
+@keyframes lg-level   { from { transform: rotate(0); } to { transform: rotate(72deg); } }
+@keyframes lg-open    { from { transform: rotate(0); } to { transform: rotate(115deg); } }
+@keyframes lg-glow    { 0% { transform: scale(0); opacity: 0; } 30% { transform: scale(1.6); opacity: 1; } 100% { transform: scale(6); opacity: 0; } }
+
+/* ── login card ── */
+.lg-card {
+  position: relative; z-index: 2; width: 100%;
+  background: rgba(255,255,255,0.97);
+  border-radius: 22px;
+  padding: 40px 38px 30px;
+  box-shadow: 0 30px 70px rgba(4,30,60,0.35), 0 0 0 1px rgba(255,255,255,0.4);
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: 50% 100%;
+  animation: lg-card-in .75s cubic-bezier(.2,.9,.3,1.15) 2.85s forwards;
+}
+.lg-card::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 5px; background: linear-gradient(90deg, #1d58a8, #1a6db5, #10b981); }
+@keyframes lg-card-in {
+  from { opacity: 0; transform: translate(40px, 190px) scale(.06) rotate(-4deg); }
+  60%  { opacity: 1; }
+  to   { opacity: 1; transform: none; }
+}
+.lg-card .auth-logo { margin-bottom: 26px; }
+.lg-card .auth-logo h1 { color: #0f4c8a; }
+.lg-card .auth-logo p  { color: #0e8a6c; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; font-size: 11.5px; }
+.lg-card .form-group input:focus { border-color: #1a6db5; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+.lg-card .auth-btn { background: linear-gradient(135deg, #1d58a8 0%, #1a6db5 50%, #0e9f7a 100%); box-shadow: 0 6px 18px rgba(14,138,108,0.35); }
+
+/* sparkles when the card appears */
+.lg-spark { position: absolute; left: 50%; top: 60%; width: 7px; height: 7px; border-radius: 50%; background: #fde68a; box-shadow: 0 0 10px #fde68a; opacity: 0; z-index: 3; pointer-events: none; animation: lg-spark .9s ease-out 2.8s forwards; }
+@keyframes lg-spark { 0% { opacity: 0; transform: translate(0,0) scale(.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(1); } }
+
+/* skip button */
+.lg-skip-btn { position: fixed; right: 18px; bottom: 18px; z-index: 5; padding: 7px 16px; border-radius: 99px; background: rgba(255,255,255,0.18); color: #fff; font-size: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.4); cursor: pointer; backdrop-filter: blur(4px); }
+.lg-skip-btn:hover { background: rgba(255,255,255,0.3); }
+
+/* footer tagline */
+.lg-tagline { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,0.75); font-size: 12px; letter-spacing: 1.5px; font-weight: 600; z-index: 1; }
+
+/* intro skipped / already seen / reduced motion → show final state instantly */
+.lg-skip .lg-card { animation: none; opacity: 1; transform: none; }
+.lg-skip .lg-person, .lg-skip .lg-spark { display: none; }
+
+@media (max-width: 520px) {
+  .lg-card { padding: 32px 22px 24px; }
+  .lg-person { width: 110px; margin-left: -55px; }
+  .lg-stage { min-height: 560px; }
+}

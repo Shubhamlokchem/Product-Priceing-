@@ -2,7 +2,7 @@
 .sidebar {
   width: var(--sidebar-width);
   min-height: 100vh;
-  background: linear-gradient(170deg, #1f5fb5 0%, #1b78c2 45%, #129a9a 80%, #10a37f 100%);
+  background: linear-gradient(170deg, #1d58a8 0%, #1a6db5 45%, #11808a 80%, #0e8a6c 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -106,7 +106,8 @@
 .nav-section-label {
   font-size: 10px;
   font-weight: 700;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.25);
   text-transform: uppercase;
   letter-spacing: 1.2px;
   padding: 4px 12px 8px;
@@ -119,10 +120,12 @@
   padding: 9px 12px;
   border-radius: 10px;
   font-size: 13px;
-  color: rgba(255,255,255,0.92);
+  color: #ffffff;
   transition: all 0.15s;
   margin-bottom: 3px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 13.5px;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.28);
   text-decoration: none;
   position: relative;
 }
@@ -204,3 +207,11 @@
   border-color: #ef4444;
   color: #fff;
 }
+
+/* Readability: crisp white text on the gradient */
+.sidebar-brand-name, .user-name { text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+.sidebar-brand-sub { text-shadow: 0 1px 2px rgba(0,0,0,0.25); }
+.nav-link.active { text-shadow: none; }
+.nav-link .nav-icon { color: #fff; }
+.nav-link.active .nav-icon { color: #fff; }
+.sidebar { -webkit-font-smoothing: antialiased; }
