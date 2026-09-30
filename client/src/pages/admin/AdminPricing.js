@@ -242,10 +242,21 @@ export default function AdminPricing() {
   const pageRows = rows2.slice(cur2 * perPage, cur2 * perPage + perPage);
   const panels = pageRows.length > perPanel ? [pageRows.slice(0, perPanel), pageRows.slice(perPanel)] : [pageRows];
   // text columns flex, short columns fixed so headers + values always show in full
-  const COLS = twoCols
-   ? 'minmax(0,2.4fr) minmax(0,1.3fr) minmax(0,0.9fr) minmax(0,1.1fr) 58px 60px 76px 46px 60px 58px'
-   : 'minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 90px 100px 110px 70px 70px 90px';
-  const HEAD = ['PRODUCT', 'MAKE', 'COO', 'GRADE', 'PURITY', 'PACK', 'PRICE ₹', 'UNIT', 'EX', 'DATE'];
+  // Column definitions — optional columns appear only if at least one product has data for them
+  const DEF2 = [
+   { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,2.4fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
+   { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a' } },
+   { h: 'COO',     get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
+   { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd' } },
+   { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc' } },
+   { h: 'PACK',    get: it => it.product.itemPackage, w: ['100px', '60px'], wrap: true, st: { color: '#a7f3d0' } },
+   { h: 'PRICE ₹', get: it => it.price.toLocaleString(), w: ['110px', '76px'], always: true, align: 'right', price: true },
+   { h: 'UNIT',    get: it => it.product.unit,        w: ['70px', '46px'],  always: true, align: 'center', st: { color: '#93c5fd' } },
+   { h: 'EX',      get: it => it.ex,                  w: ['70px', '60px'],  align: 'center' },
+   { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
+  ];
+  const cols2 = DEF2.filter(d => d.always || rows2.some(r => d.get(r)));
+  const COLS = cols2.map(d => d.w[twoCols ? 1 : 0]).join(' ');
   const FS = twoCols ? 12 : 14;
   const mono = "'Consolas','Roboto Mono','Courier New',monospace";
   const cell = { whiteSpace: 'nowrap', overflow: 'hidden', padding: twoCols ? '0 5px' : '0 8px' };
@@ -293,23 +304,21 @@ export default function AdminPricing() {
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
        <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: twoCols ? 11 : 12.5, letterSpacing: twoCols ? 0.5 : 1, fontFamily: mono }}>
-        {HEAD.map((h, i) => <div key={h} style={{ ...cell, textAlign: i === 6 ? 'right' : i >= 7 ? 'center' : 'left' }}>{h}</div>)}
+        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.align || 'left' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
        {pRows.map((it, ri) => {
         const isToday = it.date === today;
         return (
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
-          <div style={{ ...cell, ...wrap, color: '#fff', fontWeight: 900 }} title={it.product.group}>{it.product.group}</div>
-          <div style={{ ...cell, ...wrap, color: '#fde68a' }}>{it.product.make || '—'}</div>
-          <div style={{ ...cell, ...wrap }}>{it.product.coo || '—'}</div>
-          <div style={{ ...cell, ...wrap, color: '#c4b5fd' }}>{it.product.grade || '—'}</div>
-          <div style={{ ...cell, color: '#7dd3fc' }}>{it.product.purity || '—'}</div>
-          <div style={{ ...cell, ...wrap, color: '#a7f3d0' }}>{it.product.itemPackage || '—'}</div>
-          <div style={{ ...cell, textAlign: 'right', color: '#4ade80', fontWeight: 900, fontSize: FS + 2 }}>{it.price.toLocaleString()}</div>
-          <div style={{ ...cell, textAlign: 'center', color: '#93c5fd' }}>{it.product.unit}</div>
-          <div style={{ ...cell, textAlign: 'center' }}>{it.ex || '—'}</div>
-          <div style={{ ...cell, textAlign: 'center', color: isToday ? '#4ade80' : '#fbbf24' }}>{fmtDate(it.updatedAt || it.date) || '—'}</div>
+          {cols2.map(d => (
+           <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
+            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
+             ...(d.price ? { color: '#4ade80', fontWeight: 900, fontSize: FS + 2 } : {}),
+             ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
+            {d.get(it) || '—'}
+           </div>
+          ))}
          </div>
         );
        })}
@@ -354,9 +363,18 @@ export default function AdminPricing() {
   const availH = window.innerHeight - TOP_BAR_H - TICKER_H - DOTS_H - PAD_V;
 
   // Card height depends on its rows → pack cards into 5 columns, new page when full
-  const HEAD_H = 34, ROW_H = 34, ROW_TAG_H = 46;
-  const hasTags = it => !!(it.product.grade || it.product.purity || it.product.itemPackage || it.ex || it.notes);
-  const cardH = gItems => HEAD_H + gItems.reduce((h, it) => h + (hasTags(it) ? ROW_TAG_H : ROW_H), 0) + 2;
+  const HEAD_H = 34, COLHDR_H1 = 22, ROW_H = 32;
+  const cardH = gItems => HEAD_H + COLHDR_H1 + gItems.length * ROW_H + 2;
+  // Card columns — optional ones show only if this card has data for them
+  const DEF1 = [
+   { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
+   { h: 'COO',    get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
+   { h: 'GRADE',  get: it => it.product.grade,       w: 'minmax(0,1fr)',   st: { color: '#6d28d9' } },
+   { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1' } },
+   { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
+   { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
+   { h: 'NOTES',  get: it => it.notes,               w: 'minmax(0,1.1fr)', st: { color: '#64748b', textTransform: 'none' } },
+  ];
   const pages = [];
   let cols = null, colH = null;
   const newPage = () => { cols = Array.from({ length: TV_COLS }, () => []); colH = Array(TV_COLS).fill(0); pages.push(cols); };
@@ -442,37 +460,33 @@ export default function AdminPricing() {
              <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
              <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
             </div>
-            {/* Rows: name | price | unit | date — fixed columns so everything lines up */}
-            {gItems.map((item, idx) => {
-             const tags = hasTags(item);
-             const name = item.product.make || item.product.coo || item.product.grade || '';
+            {(() => {
+             const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
+             const grid = [...cols.map(d => d.w), cols.length ? 'auto' : 'minmax(0,1fr)', '40px', '52px'].join(' ');
+             const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
              return (
-              <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto 38px 50px', alignItems: 'center', columnGap: 8, height: tags ? ROW_TAG_H : ROW_H, padding: '0 11px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff' }}>
-               {/* Name + tags */}
-               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: name ? '#0f1f3d' : '#94a3b8', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
-                 {name || 'Standard'}
-                 {item.product.make && item.product.coo ? <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}> · {item.product.coo}</span> : ''}
-                </div>
-                {tags && (
-                 <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginTop: 2 }}>
-                  {item.product.grade && <span style={{ fontSize: 10, fontWeight: 700, color: '#6d28d9', background: '#ede9fe', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.grade}</span>}
-                  {item.product.purity && <span style={{ fontSize: 10, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.purity}</span>}
-                  {item.product.itemPackage && <span style={{ fontSize: 10, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.itemPackage}</span>}
-                  {item.ex && <span style={{ fontSize: 10, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>EX {item.ex}</span>}
-                  {item.notes && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.notes}</span>}
-                 </div>
-                )}
+              <>
+               {/* Column headers (only the columns this card uses) */}
+               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: 8, alignItems: 'center', height: COLHDR_H1, padding: '0 11px', background: '#e8f0fb', borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
+                {cols.map(d => <span key={d.h} style={cellS}>{d.h}</span>)}
+                <span style={{ ...cellS, textAlign: 'right' }}>PRICE ₹</span>
+                <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>
+                <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>
                </div>
-               {/* Price */}
-               <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
-               {/* Unit */}
-               <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0', textTransform: 'uppercase' }}>{item.product.unit}</span>
-               {/* Last updated */}
-               <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
-              </div>
+               {/* Rows */}
+               {gItems.map((item, idx) => (
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: 8, alignItems: 'center', height: ROW_H, padding: '0 11px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                 {cols.map(d => (
+                  <span key={d.h} title={d.get(item) || ''} style={{ ...cellS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
+                 ))}
+                 <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
+                 <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{item.product.unit}</span>
+                 <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right', textTransform: 'none' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
+                </div>
+               ))}
+              </>
              );
-            })}
+            })()}
            </div>
           ))}
          </div>
