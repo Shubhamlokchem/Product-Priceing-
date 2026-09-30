@@ -1,8 +1,9 @@
+/* ── Lok Chemicals theme: royal blue + sky blue (from the LC logo) ── */
 .sidebar {
   width: var(--sidebar-width);
   min-height: 100vh;
-  background: #f8f9fc;
-  color: #1a3a6b;
+  background: linear-gradient(180deg, #0a2a5e 0%, #0b3f8c 55%, #0d4fa8 100%);
+  color: #fff;
   display: flex;
   flex-direction: column;
   padding: 0;
@@ -10,38 +11,68 @@
   top: 0;
   left: 0;
   z-index: 100;
-  border-right: 1.5px solid #e8edf5;
-  box-shadow: 2px 0 12px rgba(26,58,107,0.06);
+  box-shadow: 4px 0 18px rgba(10,42,94,0.18);
+  overflow: hidden;
+}
+/* soft glow decoration */
+.sidebar::before {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px;
+  right: -120px; bottom: -90px;
+  background: radial-gradient(circle, rgba(56,189,248,0.35), transparent 70%);
+  pointer-events: none;
 }
 
 .sidebar-header {
   padding: 16px 14px 12px;
-  border-bottom: 1px solid #e8edf5;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  position: relative;
 }
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 2px 14px;
+}
+.sidebar-brand-logo {
+  width: 42px; height: 42px;
+  background: #fff;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  flex-shrink: 0;
+}
+.sidebar-brand-logo img { width: 34px; height: auto; object-fit: contain; }
+.sidebar-brand-name { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: 0.2px; line-height: 1.15; }
+.sidebar-brand-sub  { font-size: 10px; font-weight: 700; color: #7dd3fc; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 
 .sidebar-user-only {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  background: linear-gradient(135deg, #eef3fb, #f0f5ff);
-  border-radius: 10px;
-  border: 1.5px solid #d4e0f7;
+  padding: 9px 11px;
+  background: rgba(255,255,255,0.10);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(4px);
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, #1a3a6b, #2558a8);
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #38bdf8, #0b3f8c);
+  color: #fff;
+  overflow: hidden;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 15px;
+  font-size: 20px;
+  line-height: 1;
   flex-shrink: 0;
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(26,58,107,0.2);
+  box-shadow: 0 0 0 2px #38bdf8, 0 3px 10px rgba(0,0,0,0.25);
 }
 
 .user-name {
@@ -50,76 +81,104 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #1a3a6b;
+  color: #fff;
 }
 
 .user-role-badge {
-  font-size: 10px;
-  background: rgba(26,58,107,0.1);
-  color: #2558a8;
-  border-radius: 4px;
-  padding: 1px 7px;
-  margin-top: 3px;
+  font-size: 9.5px;
+  background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+  color: #fff;
+  border-radius: 99px;
+  padding: 1px 9px;
+  margin-top: 4px;
   display: inline-block;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  font-weight: 700;
-  border: 1px solid rgba(26,58,107,0.15);
+  letter-spacing: 0.8px;
+  font-weight: 800;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 10px 10px;
+  padding: 12px 10px;
+  position: relative;
+}
+
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(186,230,253,0.7);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  padding: 4px 12px 8px;
 }
 
 .nav-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  border-radius: 9px;
+  gap: 11px;
+  padding: 9px 12px;
+  border-radius: 10px;
   font-size: 13px;
-  color: #5a6e8c;
+  color: rgba(255,255,255,0.78);
   transition: all 0.15s;
-  margin-bottom: 2px;
+  margin-bottom: 3px;
   font-weight: 500;
-  border: 1px solid transparent;
   text-decoration: none;
+  position: relative;
 }
 
 .nav-link:hover {
-  background: #eef3fb;
-  color: #1a3a6b;
-  border-color: #d4e0f7;
+  background: rgba(255,255,255,0.10);
+  color: #fff;
 }
 
 .nav-link.active {
-  background: linear-gradient(135deg, #1a3a6b, #2558a8);
-  color: #fff;
+  background: #fff;
+  color: #0b3f8c;
   font-weight: 700;
-  border-color: transparent;
-  box-shadow: 0 3px 10px rgba(26,58,107,0.2);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+}
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: -10px; top: 8px; bottom: 8px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: #38bdf8;
 }
 
-.nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.10);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.nav-link.active .nav-icon {
+  background: linear-gradient(135deg, #0b3f8c, #1d8fe0);
+  color: #fff;
+}
 
 .logout-btn {
-  margin: 10px;
-  padding: 9px 14px;
-  background: #fff0f0;
-  color: #dc2626;
-  border-radius: 9px;
+  margin: 12px 10px 14px;
+  padding: 9px 12px;
+  background: rgba(255,255,255,0.08);
+  color: #fecaca;
+  border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: background 0.15s;
-  border: 1.5px solid #fca5a5;
+  gap: 10px;
+  transition: all 0.15s;
+  border: 1px solid rgba(254,202,202,0.35);
   cursor: pointer;
+  position: relative;
 }
 
 .logout-btn:hover {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
 }
