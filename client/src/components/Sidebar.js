@@ -38,15 +38,6 @@ export default function Sidebar({ links }) {
     <div className="sidebar-brand-sub">Pricing CRM</div>
    </div>
   </div>
-  <div className="sidebar-user-only">
-   <div className="user-avatar" title={user?.name || user?.email}>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c0-4.4 3.8-7.5 8.5-7.5s8.5 3.1 8.5 7.5z"/></svg>
-   </div>
-   <div style={{ minWidth: 0 }}>
-    <div className="user-name">{user?.name || user?.email}</div>
-    <div className="user-role-badge">{user?.role}</div>
-   </div>
-  </div>
  </div>
 
  <nav className="sidebar-nav">
@@ -59,9 +50,18 @@ export default function Sidebar({ links }) {
   ))}
  </nav>
 
- <button className="logout-btn" onClick={logout}>
-  <span className="nav-icon" style={{ background: 'transparent' }}><Icon>{P.logout}</Icon></span> Sign Out
- </button>
+  <div className="sidebar-user-only sidebar-user-bottom">
+   <div className="user-avatar" title={user?.name || user?.email}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c0-4.4 3.8-7.5 8.5-7.5s8.5 3.1 8.5 7.5z"/></svg>
+   </div>
+   <div style={{ minWidth: 0, flex: 1 }}>
+    <div className="user-name">{user?.name || user?.email}</div>
+    <div className="user-role-badge">{user?.role}</div>
+   </div>
+   <button className="signout-icon-btn" onClick={logout} title="Sign out" aria-label="Sign out">
+    <Icon>{P.logout}</Icon>
+   </button>
+  </div>
  </aside>
  );
 }

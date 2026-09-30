@@ -182,3 +182,25 @@
   color: #fff;
   border-color: #ef4444;
 }
+
+/* User card at the bottom with sign-out icon */
+.sidebar-user-bottom {
+  margin: 10px 10px 14px;
+  position: relative;
+}
+.signout-icon-btn {
+  width: 32px; height: 32px;
+  flex-shrink: 0;
+  border-radius: 9px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(254,202,202,0.4);
+  color: #fecaca;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.signout-icon-btn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
