@@ -376,7 +376,6 @@ export default function AdminPricing() {
   const HEAD_H = 32, ROW_H = 28, ROW_H2L = 40;   // row grows to 2 lines when text needs it
   let COLHDR_H1 = 22;
   let rowHOf = () => ROW_H;
-  const cardH = gItems => HEAD_H + COLHDR_H1 + gItems.reduce((h, it) => h + rowHOf(it), 0) + 2;
   // Card columns — all shown on every card
   const DEF1 = [
    { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
