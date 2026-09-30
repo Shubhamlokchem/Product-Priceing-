@@ -579,6 +579,24 @@ export default function AdminProducts() {
     )}
    </div>
 
+   {/* Expand / Collapse all */}
+   {(() => {
+    const keys = Object.keys(grouped);
+    const allOpen = keys.length > 0 && keys.every(g => expandedGroups.has(g));
+    return (
+     <button onClick={() => setExpandedGroups(allOpen ? new Set() : new Set(keys))}
+      title={allOpen ? 'Collapse all products' : 'Expand all products'}
+      style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', border: `1.5px solid ${allOpen ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: allOpen ? '#f0f5ff' : '#fff', cursor: 'pointer', color: allOpen ? '#1a3a6b' : '#6b7280', fontWeight: 600, flexShrink: 0, whiteSpace: 'nowrap' }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+       {allOpen
+        ? <><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></>
+        : <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>}
+      </svg>
+      {allOpen ? 'Collapse' : 'Expand'}
+     </button>
+    );
+   })()}
+
   </div>
   </div>{/* /sticky-page-header */}
 
