@@ -232,23 +232,34 @@ export default function AdminPricing() {
 
   // Fixed 5 columns × 3 rows
   const TV_COLS = 5;
-  const TV_ROWS = 3;
   const GAP = 8;
   const TOP_BAR_H = 70;
   const TICKER_H  = 40;
   const DOTS_H    = 24;
   const PAD_V     = 16;
-  const cardsPerPage = TV_COLS * TV_ROWS; // exactly 15 cards per page
   const availH = window.innerHeight - TOP_BAR_H - TICKER_H - DOTS_H - PAD_V;
 
+  // Card height depends on its rows → pack cards into 5 columns, new page when full
+  const HEAD_H = 34, ROW_H = 34, ROW_TAG_H = 46;
+  const hasTags = it => !!(it.product.grade || it.product.purity || it.product.itemPackage || it.ex || it.notes);
+  const cardH = gItems => HEAD_H + gItems.reduce((h, it) => h + (hasTags(it) ? ROW_TAG_H : ROW_H), 0) + 2;
   const pages = [];
-  for (let i = 0; i < allGroups.length; i += cardsPerPage) {
-   pages.push(allGroups.slice(i, i + cardsPerPage));
-  }
+  let cols = null, colH = null;
+  const newPage = () => { cols = Array.from({ length: TV_COLS }, () => []); colH = Array(TV_COLS).fill(0); pages.push(cols); };
+  allGroups.forEach(entry => {
+   const h = Math.min(cardH(entry[1]), availH);
+   if (!cols) newPage();
+   // shortest column that still has room
+   let best = -1;
+   colH.forEach((ch, i) => { if (ch + h + (ch ? GAP : 0) <= availH && (best === -1 || ch < colH[best])) best = i; });
+   if (best === -1) { newPage(); best = 0; }
+   cols[best].push(entry);
+   colH[best] += h + (colH[best] ? GAP : 0);
+  });
 
   const totalPages = pages.length;
   const curPage = totalPages > 0 ? tvPage % totalPages : 0;
-  const pageGroups = pages[curPage] || [];
+  const pageCols = pages[curPage] || [];
   const progressPct = ((TV_PAGE_SEC - tvCountdown) / TV_PAGE_SEC) * 100;
   const liveCount = latestItems.filter(i => i.price !== null).length;
   const navBtn = { width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
@@ -307,50 +318,49 @@ export default function AdminPricing() {
         <div style={{ fontSize: 14, color: '#7dd3fc' }}>Prices will appear here automatically as soon as they are updated.</div>
        </div>
       ) : <>
-       <div style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${TV_COLS}, 1fr)`,
-        gridTemplateRows: `repeat(${TV_ROWS}, 1fr)`,
-        gap: GAP,
-        height: availH,
-       }}>
-        {pageGroups.map(([group, gItems]) => (
-         <div key={group} style={{ display: 'flex', flexDirection: 'column', background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', minHeight: 0 }}>
-          {/* Header */}
-          <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '7px 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-           <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
-           <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
-          </div>
-          {/* Product rows — equal height */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-           {gItems.map((item, idx) => (
-            <div key={item.product._id} style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0 11px', borderBottom: idx < gItems.length - 1 ? '1px solid #e6edf7' : 'none', gap: 8, minHeight: 0, overflow: 'hidden', background: idx % 2 === 0 ? '#ffffff' : '#f3f7fd' }}>
-             {/* Name + details */}
-             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, color: '#0f1f3d', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
-               {item.product.make || '—'}
-               {item.product.coo ? <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}> · {item.product.coo}</span> : ''}
-              </div>
-              {(item.product.grade || item.product.purity || item.product.itemPackage || item.ex || item.notes) && (
-               <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginTop: 1 }}>
-                {item.product.grade && <span style={{ fontSize: 10, fontWeight: 700, color: '#6d28d9', background: '#ede9fe', padding: '0 6px', borderRadius: 4 }}>{item.product.grade}</span>}
-                {item.product.purity && <span style={{ fontSize: 10, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0 6px', borderRadius: 4 }}>{item.product.purity}</span>}
-                {item.product.itemPackage && <span style={{ fontSize: 10, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '0 6px', borderRadius: 4 }}>{item.product.itemPackage}</span>}
-                {item.ex && <span style={{ fontSize: 10, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase' }}>EX {item.ex}</span>}
-                {item.notes && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 90 }}>{item.notes}</span>}
-               </div>
-              )}
-             </div>
-             {/* Price block */}
-             <div style={{ flexShrink: 0, textAlign: 'right', lineHeight: 1.15 }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap' }}>
-               ₹{item.price.toLocaleString()}<span style={{ fontSize: 11, color: '#0369a1', fontWeight: 800, marginLeft: 2 }}>/{item.product.unit}</span>
-              </div>
-              <div style={{ fontSize: 10, color: '#b45309', fontWeight: 700 }}>{fmtDate(item.updatedAt || item.date) || ''}</div>
-             </div>
+       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TV_COLS}, minmax(0, 1fr))`, gap: GAP, height: availH, alignItems: 'start' }}>
+        {pageCols.map((colGroups, ci) => (
+         <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: GAP, minWidth: 0, maxHeight: availH, overflow: 'hidden' }}>
+          {colGroups.map(([group, gItems]) => (
+           <div key={group} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', flexShrink: 0 }}>
+            {/* Header */}
+            <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
+             <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
             </div>
-           ))}
-          </div>
+            {/* Rows: name | price | unit | date — fixed columns so everything lines up */}
+            {gItems.map((item, idx) => {
+             const tags = hasTags(item);
+             const name = item.product.make || item.product.coo || item.product.grade || '';
+             return (
+              <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto 38px 50px', alignItems: 'center', columnGap: 8, height: tags ? ROW_TAG_H : ROW_H, padding: '0 11px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff' }}>
+               {/* Name + tags */}
+               <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, color: name ? '#0f1f3d' : '#94a3b8', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.3 }}>
+                 {name || 'Standard'}
+                 {item.product.make && item.product.coo ? <span style={{ color: '#475569', fontWeight: 700, fontSize: 12 }}> · {item.product.coo}</span> : ''}
+                </div>
+                {tags && (
+                 <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap', overflow: 'hidden', marginTop: 2 }}>
+                  {item.product.grade && <span style={{ fontSize: 10, fontWeight: 700, color: '#6d28d9', background: '#ede9fe', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.grade}</span>}
+                  {item.product.purity && <span style={{ fontSize: 10, fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.purity}</span>}
+                  {item.product.itemPackage && <span style={{ fontSize: 10, fontWeight: 700, color: '#065f46', background: '#d1fae5', padding: '0 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>{item.product.itemPackage}</span>}
+                  {item.ex && <span style={{ fontSize: 10, fontWeight: 800, color: '#1d4ed8', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>EX {item.ex}</span>}
+                  {item.notes && <span style={{ fontSize: 10, color: '#64748b', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.notes}</span>}
+                 </div>
+                )}
+               </div>
+               {/* Price */}
+               <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
+               {/* Unit */}
+               <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0', textTransform: 'uppercase' }}>{item.product.unit}</span>
+               {/* Last updated */}
+               <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
+              </div>
+             );
+            })}
+           </div>
+          ))}
          </div>
         ))}
        </div>
