@@ -81,8 +81,8 @@ export default function AdminProducts() {
  const [addingInGroup, setAddingInGroup] = useState(null); // group name being added to
  const [inlineForm, setInlineForm] = useState({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' });
  const [showBulkDD, setShowBulkDD] = useState(false);
- const [bulkAction, setBulkAction] = useState(null); // null | 'delete'|'grade'|'coo'|'make'|'purity'|'unit'|'clearPrice'
- const [bulkValue, setBulkValue] = useState('');
+ const [, setBulkAction] = useState(null); // null | 'delete'|'grade'|'coo'|'make'|'purity'|'unit'|'clearPrice'
+ const [, setBulkValue] = useState('');
  const [importModal, setImportModal] = useState(null); // null | { duplicates, unique, loading }
  const groupDDRef = useRef(null);
  const productDDRef = useRef(null);
@@ -578,87 +578,52 @@ export default function AdminProducts() {
      {selectedProducts.size > 0 && <span style={{ background: '#1a3a6b', color: '#fff', fontSize: 10, fontWeight: 700, padding: '1px 6px', borderRadius: 99 }}>{bulkTargets.length}</span>}
     </button>
 
-    {showBulkDD && (
-     <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 400, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 12, boxShadow: '0 12px 36px rgba(0,0,0,0.14)', width: 280, overflow: 'hidden' }}>
-
-      {/* Add Product */}
-      <div style={{ padding: '10px 14px 8px', borderBottom: '1px solid #f3f4f6' }}>
+    {showBulkDD && (() => {
+     const I = ({ d }) => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">{d}</svg>;
+     const tile = (bg, fg, bd) => ({ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 4px', background: bg, color: fg, border: `1px solid ${bd}`, borderRadius: 9, fontSize: 10.5, fontWeight: 700, cursor: 'pointer', transition: 'transform .12s, box-shadow .12s' });
+     const hover = { onMouseEnter: e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 3px 8px rgba(0,0,0,0.08)'; }, onMouseLeave: e => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = 'none'; } };
+     return (
+      <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 400, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 14px 36px rgba(15,40,80,0.16)', width: 236, padding: 8 }}>
+       {/* Add product */}
        <button onClick={() => { setShowAddForm(v => !v); setMsg(null); setShowBulkDD(false); }}
-        style={{ width: '100%', padding: '8px', background: showAddForm ? '#fef2f2' : '#1a3a6b', color: showAddForm ? '#dc2626' : '#fff', border: showAddForm ? '1.5px solid #fca5a5' : 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-        {showAddForm ? '✕ Cancel Add Product' : '+ Add Product'}
+        style={{ width: '100%', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, border: showAddForm ? '1px solid #fca5a5' : 'none', borderRadius: 9, fontSize: 12.5, fontWeight: 800, cursor: 'pointer',
+         background: showAddForm ? '#fef2f2' : 'linear-gradient(135deg,#1d58a8,#1a6db5 55%,#0e9f7a)', color: showAddForm ? '#dc2626' : '#fff', boxShadow: showAddForm ? 'none' : '0 3px 10px rgba(14,138,108,0.25)' }}>
+        {showAddForm ? '✕ Cancel' : <><I d={<><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>} /> Add Product</>}
        </button>
-      </div>
 
-      {/* CSV section */}
-      <div style={{ padding: '10px 14px 6px', borderBottom: '1px solid #f3f4f6' }}>
-       <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>CSV</div>
-       <div style={{ display: 'flex', gap: 6 }}>
-        <button onClick={downloadSampleCSV} style={{ flex: 1, padding: '7px 6px', background: '#faf5ff', color: '#7c3aed', border: '1.5px solid #ddd6fe', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
-         ⬇ Sample
+       {/* CSV tiles */}
+       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 8 }}>
+        <button onClick={downloadSampleCSV} title="Download a sample CSV" style={tile('#faf5ff', '#7c3aed', '#e9d5ff')} {...hover}>
+         <I d={<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></>} />Sample
         </button>
-        <button onClick={() => { importRef.current?.click(); setShowBulkDD(false); }}
-         style={{ flex: 1, padding: '7px 6px', background: '#f0f9ff', color: '#0369a1', border: '1.5px solid #bae6fd', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
-         ↑ Import
+        <button onClick={() => { importRef.current?.click(); setShowBulkDD(false); }} title="Import products / update prices from CSV" style={tile('#eff6ff', '#1d4ed8', '#bfdbfe')} {...hover}>
+         <I d={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></>} />Import
         </button>
-        <button onClick={() => { exportProducts(); setShowBulkDD(false); }}
-         style={{ flex: 1, padding: '7px 6px', background: '#f0fdf4', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: 7, fontSize: 11, fontWeight: 700, cursor: 'pointer', textAlign: 'center' }}>
-         ↓ Export
+        <button onClick={() => { exportProducts(); setShowBulkDD(false); }} title="Export products with prices" style={tile('#ecfdf5', '#047857', '#a7f3d0')} {...hover}>
+         <I d={<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>} />Export
         </button>
        </div>
-      </div>
 
-      {/* Bulk actions section */}
-      <div style={{ padding: '8px 14px 6px' }}>
-       <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-        Bulk Actions
-        <span style={{ fontSize: 10, color: '#c0c9d8', fontWeight: 400, marginLeft: 6, textTransform: 'none' }}>
-         {selectedProducts.size > 0 ? `(${bulkTargets.length} selected)` : `(all ${bulkTargets.length} shown)`}
+       {/* Bulk actions */}
+       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '10px 2px 5px', fontSize: 9.5, fontWeight: 800, color: '#94a3b8', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+        <span>Bulk actions</span>
+        <span style={{ background: '#f1f5f9', color: '#475569', padding: '1px 7px', borderRadius: 99, textTransform: 'none', letterSpacing: 0 }}>
+         {selectedProducts.size > 0 ? `${bulkTargets.length} selected` : `all ${bulkTargets.length} shown`}
         </span>
        </div>
+       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <button onClick={() => { executeBulkAction('clearPrice', ''); setShowBulkDD(false); }} {...hover}
+         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 4px', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: 9, fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+         <I d={<><path d="M20 20H7L3 16l10-10 7 7-3.5 3.5" /><path d="M6 11l7 7" /></>} />Clear Prices
+        </button>
+        <button onClick={() => { executeBulkAction('delete', ''); setShowBulkDD(false); }} {...hover}
+         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, padding: '7px 4px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 9, fontSize: 11.5, fontWeight: 700, cursor: 'pointer' }}>
+         <I d={<><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></>} />Delete
+        </button>
+       </div>
       </div>
-
-      {!bulkAction ? (
-       <div style={{ paddingBottom: 6 }}>
-        {[
-         { key: 'clearPrice', label: '🗑 Clear Prices',    color: '#b45309' },
-         { key: 'delete',     label: '🗑 Delete Products', color: '#dc2626' },
-        ].map(({ key, label, color }) => (
-         <button key={key}
-          onClick={() => { if (key === 'delete' || key === 'clearPrice') { executeBulkAction(key, ''); setShowBulkDD(false); } else setBulkAction(key); }}
-          style={{ width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: 12, color, background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500 }}
-          onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-          onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-          {label}
-         </button>
-        ))}
-       </div>
-      ) : (
-       <div style={{ padding: '6px 14px 14px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#1a3a6b', marginBottom: 8, textTransform: 'uppercase' }}>
-         Set {bulkAction} for {bulkTargets.length} products
-        </div>
-        {bulkAction === 'unit' ? (
-         <select value={bulkValue} onChange={e => setBulkValue(e.target.value)}
-          style={{ width: '100%', padding: '6px 9px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, marginBottom: 8 }}>
-          <option value="">Select unit…</option>
-          {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
-         </select>
-        ) : (
-         <input autoFocus value={bulkValue} onChange={e => setBulkValue(e.target.value)}
-          placeholder={`New ${bulkAction} value…`}
-          onKeyDown={e => { if (e.key === 'Enter') { executeBulkAction(bulkAction, bulkValue); setShowBulkDD(false); } }}
-          style={{ width: '100%', padding: '6px 9px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, marginBottom: 8, boxSizing: 'border-box' }} />
-        )}
-        <div style={{ display: 'flex', gap: 6 }}>
-         <button onClick={() => { executeBulkAction(bulkAction, bulkValue); setShowBulkDD(false); }}
-          style={{ flex: 1, padding: '6px', background: '#1a3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Apply</button>
-         <button onClick={() => setBulkAction(null)}
-          style={{ padding: '6px 10px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 7, fontSize: 12, cursor: 'pointer' }}>Back</button>
-        </div>
-       </div>
-      )}
-     </div>
-    )}
+     );
+    })()}
    </div>
 
    {/* Expand / Collapse all */}

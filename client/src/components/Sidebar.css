@@ -2,7 +2,7 @@
 .sidebar {
   width: var(--sidebar-width);
   min-height: 100vh;
-  background: linear-gradient(170deg, #1d58a8 0%, #1a6db5 45%, #11808a 80%, #0e8a6c 100%);
+  background: linear-gradient(170deg, #1a51a0 0%, #1765ab 45%, #0f7883 80%, #0c8064 100%);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -226,23 +226,20 @@
 }
 .sidebar-user-bottom .user-role-badge { margin-top: 0; flex-shrink: 0; }
 
-/* Watermark in the empty sidebar area — sits behind everything, never blocks clicks */
+/* Chemistry watermark in the empty lower sidebar area — behind everything, never blocks clicks */
 .sidebar-watermark {
   position: absolute;
   left: 0; right: 0;
-  bottom: 110px;
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  bottom: 84px;
+  display: flex; justify-content: center;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.13;
+  opacity: 0.12;
 }
-.sidebar-watermark img {
-  width: 140px; height: auto;
-  filter: brightness(0) invert(1);      /* white silhouette of the LC logo */
-  transform: rotate(-8deg);
-}
-.sidebar-watermark span {
-  font-size: 13px; font-weight: 900; letter-spacing: 4px; color: #fff;
-}
+.sidebar-watermark svg { width: 170px; height: auto; }
 .sidebar-header, .sidebar-nav, .sidebar-user-bottom { position: relative; z-index: 1; }
-@media (max-height: 640px) { .sidebar-watermark { bottom: 90px; opacity: 0.1; } .sidebar-watermark img { width: 110px; } }
+@media (max-height: 700px) { .sidebar-watermark { bottom: 80px; } .sidebar-watermark svg { width: 128px; } }
+
+/* Cleaner, more readable menu text */
+.nav-link { font-size: 13.5px; letter-spacing: 0.1px; white-space: nowrap; }
+.nav-section-label { color: rgba(255,255,255,0.95); }

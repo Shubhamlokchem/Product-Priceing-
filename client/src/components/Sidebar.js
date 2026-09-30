@@ -41,8 +41,28 @@ export default function Sidebar({ links }) {
  </div>
 
  <div className="sidebar-watermark" aria-hidden="true">
-  <img src="/logo.png" alt="" />
-  <span>LOK CHEMICALS</span>
+  <svg viewBox="0 0 216 300" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+   {/* benzene ring */}
+   <g transform="translate(22 18)"><polygon points="30,0 56,15 56,45 30,60 4,45 4,15" /><circle cx="30" cy="30" r="14" /></g>
+   {/* erlenmeyer flask with liquid + bubbles */}
+   <g transform="translate(118 8)">
+    <path d="M24 0h26M29 0v30L6 78a6 6 0 0 0 5 9h52a6 6 0 0 0 5-9L45 30V0" />
+    <path d="M14 62h46" /><circle cx="30" cy="72" r="3" /><circle cx="42" cy="68" r="2" /><circle cx="36" cy="52" r="2" />
+   </g>
+   {/* ball-and-stick molecule */}
+   <g transform="translate(14 128)">
+    <line x1="18" y1="22" x2="52" y2="40" /><line x1="52" y1="40" x2="74" y2="12" /><line x1="52" y1="40" x2="46" y2="76" />
+    <circle cx="18" cy="22" r="10" /><circle cx="52" cy="40" r="12" /><circle cx="74" cy="12" r="7" /><circle cx="46" cy="76" r="8" />
+   </g>
+   {/* test tube */}
+   <g transform="translate(150 118) rotate(18)"><path d="M0 0h20M3 0v70a7 7 0 0 0 14 0V0" /><path d="M3 44h14" /></g>
+   {/* formulas */}
+   <g stroke="none" fill="#fff" fontFamily="Segoe UI, sans-serif" fontWeight="800">
+    <text x="104" y="232" fontSize="20">C₆H₆</text>
+    <text x="16" y="262" fontSize="15">H₂SO₄</text>
+    <text x="120" y="284" fontSize="15">NaOH</text>
+   </g>
+  </svg>
  </div>
 
  <nav className="sidebar-nav">
