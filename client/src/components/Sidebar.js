@@ -40,6 +40,11 @@ export default function Sidebar({ links }) {
   </div>
  </div>
 
+ <div className="sidebar-watermark" aria-hidden="true">
+  <img src="/logo.png" alt="" />
+  <span>LOK CHEMICALS</span>
+ </div>
+
  <nav className="sidebar-nav">
   <div className="nav-section-label">Menu</div>
   {links.map(({ to, label }) => (

@@ -33,7 +33,7 @@ function PriceTicker({ items }) {
  const text = priced.map(i => `${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`).join('   •   ');
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
-   <div style={{ display: 'inline-block', animation: 'ticker 50s linear infinite', paddingLeft: '100%' }}>
+   <div style={{ display: 'inline-block', animation: `ticker ${Math.max(25, Math.round(text.length * 0.11))}s linear infinite`, paddingLeft: '100%' }}>
     {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
    </div>
    <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
@@ -123,7 +123,7 @@ export default function AdminPricing() {
  const [productSearch, setProductSearch] = useState('');
  const [tvMode, setTvMode] = useState(false);   // TV 1: Price Board
  const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Price Board 2 (airport style)
- const TV2_PAGE_SEC = 20;
+ const TV2_PAGE_SEC = 15;
  const [tv2Page, setTv2Page] = useState(0);
  const [tv2Countdown, setTv2Countdown] = useState(TV2_PAGE_SEC);
  useEffect(() => {
@@ -132,7 +132,7 @@ export default function AdminPricing() {
   return () => clearInterval(t);
  }, [tv2Mode]);
  const [tvPage, setTvPage] = useState(0);
- const TV_PAGE_SEC = 20;        // seconds before auto-advance
+ const TV_PAGE_SEC = 15;        // seconds before auto-advance
  const [tvCountdown, setTvCountdown] = useState(TV_PAGE_SEC);
  const [latestItems, setLatestItems] = useState([]); // always-latest prices for TV mode
  const groupDDRef = useRef(null);
@@ -231,7 +231,8 @@ export default function AdminPricing() {
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
   const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
-  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - 24;
+  const TICK_H = 40;
+  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 24;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
   const twoCols = false;
   const ROW_H2 = 34;
@@ -330,6 +331,12 @@ export default function AdminPricing() {
      ))}
     </div>
 
+    {/* Ticker (same as Price Board 1) */}
+    <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '11px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
+    </div>
+
     {/* Footer */}
     <div style={{ height: FOOT_H, flexShrink: 0, background: '#082c63', borderTop: '2px solid #1e4f9a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', fontFamily: mono, fontSize: 13, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>
      <span>{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</span>
@@ -358,7 +365,6 @@ export default function AdminPricing() {
    ]);
 
   // Fixed 5 columns × 3 rows
-  const TV_COLS = 5;
   const GAP = 8;
   const TOP_BAR_H = 70;
   const TICKER_H  = 40;
@@ -379,23 +385,51 @@ export default function AdminPricing() {
    { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
    { h: 'NOTES',  get: it => it.notes,               w: 'minmax(0,1.1fr)', st: { color: '#64748b', textTransform: 'none' } },
   ];
-  const pages = [];
-  let cols = null, colH = null;
-  const newPage = () => { cols = Array.from({ length: TV_COLS }, () => []); colH = Array(TV_COLS).fill(0); pages.push(cols); };
+  // Measure real text widths so each card is exactly as wide as its data needs
+  const mctx = document.createElement('canvas').getContext('2d');
+  const tw = (t, font, ls = 0) => { mctx.font = font; const str = String(t ?? ''); return Math.ceil(mctx.measureText(str).width + ls * str.length); };
+  const F_ROW = "700 12px 'Segoe UI', sans-serif", F_MAKE = "800 13.5px 'Segoe UI', sans-serif", F_HDR = "800 9.5px 'Segoe UI', sans-serif";
+  const F_SMALLP = "800 13px 'Segoe UI', sans-serif", F_BIGP = "900 18px 'Segoe UI', sans-serif";
+  const CGAP = 6, CPAD = 20, UNIT_W = 38, DATE_W = 52;
+  const availW = window.innerWidth - 20;
+  const hdrW = h => tw(h, F_HDR, 0.6);
+  const cardLayout = gItems => {
+   const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
+   const hasCost = gItems.some(it => it.cost != null);
+   const hasTarget = gItems.some(it => it.target != null);
+   const colW = cols.map(d => Math.min(230, Math.max(hdrW(d.h), ...gItems.map(it => tw(d.h === 'NOTES' ? (d.get(it) || '') : String(d.get(it) || '—').toUpperCase(), d.h === 'MAKE' ? F_MAKE : F_ROW)))) + 2);
+   const costW = hasCost ? Math.max(hdrW('COST'), ...gItems.map(it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const mktW = Math.max(hdrW('MARKET ₹'), ...gItems.map(it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
+   const tgtW = hasTarget ? Math.max(hdrW('TARGET'), ...gItems.map(it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const widths = [...colW, ...(hasCost ? [costW] : []), mktW, ...(hasTarget ? [tgtW] : []), UNIT_W, DATE_W];
+   const contentW = widths.reduce((a, b) => a + b, 0) + CGAP * (widths.length - 1) + CPAD;
+   return { cols, hasCost, hasTarget, colW, costW, mktW, tgtW, w: Math.min(availW, Math.max(tw(gItems[0]?.product.group, "800 13px 'Segoe UI', sans-serif", 0.4) + 60, contentW)) };
+  };
+  const layouts = {};
+  allGroups.forEach(([g, gItems]) => { layouts[g] = cardLayout(gItems); });
+
+  // Flow cards left → right into rows; rows stack down; new page when the screen is full
+  const rowsAll = [];
+  let row = [], rowW = 0;
   allGroups.forEach(entry => {
-   const h = Math.min(cardH(entry[1]), availH);
-   if (!cols) newPage();
-   // shortest column that still has room
-   let best = -1;
-   colH.forEach((ch, i) => { if (ch + h + (ch ? GAP : 0) <= availH && (best === -1 || ch < colH[best])) best = i; });
-   if (best === -1) { newPage(); best = 0; }
-   cols[best].push(entry);
-   colH[best] += h + (colH[best] ? GAP : 0);
+   const w = layouts[entry[0]].w;
+   const add = w + (row.length ? GAP : 0);
+   if (row.length && rowW + add > availW) { rowsAll.push(row); row = []; rowW = 0; }
+   row.push(entry); rowW += w + (row.length > 1 ? GAP : 0);
   });
+  if (row.length) rowsAll.push(row);
+  const pages = [];
+  let pg = [], used = 0;
+  rowsAll.forEach(r => {
+   const h = Math.min(availH, Math.max(...r.map(([, gi]) => cardH(gi))));
+   if (pg.length && used + GAP + h > availH) { pages.push(pg); pg = []; used = 0; }
+   pg.push(r); used += (used ? GAP : 0) + h;
+  });
+  if (pg.length) pages.push(pg);
 
   const totalPages = pages.length;
   const curPage = totalPages > 0 ? tvPage % totalPages : 0;
-  const pageCols = pages[curPage] || [];
+  const pageRows1 = pages[curPage] || [];
   const progressPct = ((TV_PAGE_SEC - tvCountdown) / TV_PAGE_SEC) * 100;
   const liveCount = latestItems.filter(i => i.price !== null).length;
   const navBtn = { width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
@@ -454,26 +488,34 @@ export default function AdminPricing() {
         <div style={{ fontSize: 14, color: '#7dd3fc' }}>Prices will appear here automatically as soon as they are updated.</div>
        </div>
       ) : <>
-       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${TV_COLS}, minmax(0, 1fr))`, gap: GAP, height: availH, alignItems: 'start' }}>
-        {pageCols.map((colGroups, ci) => (
-         <div key={ci} style={{ display: 'flex', flexDirection: 'column', gap: GAP, minWidth: 0, maxHeight: availH, overflow: 'hidden' }}>
-          {colGroups.map(([group, gItems]) => (
-           <div key={group} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', flexShrink: 0 }}>
+       <div style={{ display: 'flex', flexDirection: 'column', gap: GAP, height: availH, overflow: 'hidden' }}>
+        {pageRows1.map((rowGroups, ri) => (
+         <div key={ri} style={{ display: 'flex', gap: GAP, alignItems: 'flex-start', flexShrink: 0 }}>
+          {rowGroups.map(([group, gItems]) => (
+           <div key={group} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', flex: `${layouts[group].w} 1 ${layouts[group].w}px`, minWidth: layouts[group].w, maxWidth: '100%' }}>
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
              <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}</span>
              <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{gItems.length}</span>
             </div>
             {(() => {
-             const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
-             const hasCost = gItems.some(it => it.cost != null);
-             const hasTarget = gItems.some(it => it.target != null);
-             const grid = [...cols.map(d => d.w), ...(hasCost ? ['auto'] : []), cols.length ? 'auto' : 'minmax(0,1fr)', ...(hasTarget ? ['auto'] : []), '40px', '52px'].join(' ');
+             const L = layouts[group];
+             const { cols, hasCost, hasTarget } = L;
+             // measured widths; the first text column absorbs any extra space when the row stretches
+             // each column keeps its measured width and shares any extra space in proportion
+             const g = w => `minmax(${w}px, ${w}fr)`;
+             const grid = [
+              ...L.colW.map(g),
+              ...(hasCost ? [g(L.costW)] : []),
+              g(L.mktW),
+              ...(hasTarget ? [g(L.tgtW)] : []),
+              g(UNIT_W), g(DATE_W),
+             ].join(' ');
              const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
              return (
               <>
                {/* Column headers (only the columns this card uses) */}
-               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: 8, alignItems: 'center', height: COLHDR_H1, padding: '0 11px', background: '#e8f0fb', borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
+               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: COLHDR_H1, padding: '0 10px', background: '#e8f0fb', borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
                 {cols.map(d => <span key={d.h} style={cellS}>{d.h}</span>)}
                 {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST</span>}
                 <span style={{ ...cellS, textAlign: 'right' }}>MARKET ₹</span>
@@ -483,7 +525,7 @@ export default function AdminPricing() {
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
-                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: 8, alignItems: 'center', height: ROW_H, padding: '0 11px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: ROW_H, padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...cellS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
                  ))}

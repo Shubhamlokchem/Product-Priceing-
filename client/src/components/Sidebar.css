@@ -225,3 +225,24 @@
   text-shadow: 0 1px 3px rgba(0,0,0,0.3);
 }
 .sidebar-user-bottom .user-role-badge { margin-top: 0; flex-shrink: 0; }
+
+/* Watermark in the empty sidebar area — sits behind everything, never blocks clicks */
+.sidebar-watermark {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 110px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.13;
+}
+.sidebar-watermark img {
+  width: 140px; height: auto;
+  filter: brightness(0) invert(1);      /* white silhouette of the LC logo */
+  transform: rotate(-8deg);
+}
+.sidebar-watermark span {
+  font-size: 13px; font-weight: 900; letter-spacing: 4px; color: #fff;
+}
+.sidebar-header, .sidebar-nav, .sidebar-user-bottom { position: relative; z-index: 1; }
+@media (max-height: 640px) { .sidebar-watermark { bottom: 90px; opacity: 0.1; } .sidebar-watermark img { width: 110px; } }
