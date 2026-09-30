@@ -375,7 +375,7 @@ export default function AdminPricing() {
   // Card height depends on its rows → pack cards into 5 columns, new page when full
   const HEAD_H = 34, COLHDR_H1 = 22, ROW_H = 32;
   const cardH = gItems => HEAD_H + COLHDR_H1 + gItems.length * ROW_H + 2;
-  // Card columns — optional ones show only if this card has data for them
+  // Card columns — all shown on every card
   const DEF1 = [
    { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
    { h: 'COO',    get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
@@ -383,7 +383,6 @@ export default function AdminPricing() {
    { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1' } },
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
    { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
-   { h: 'NOTES',  get: it => it.notes,               w: 'minmax(0,1.1fr)', st: { color: '#64748b', textTransform: 'none' } },
   ];
   // Measure real text widths so each card is exactly as wide as its data needs
   const mctx = document.createElement('canvas').getContext('2d');
@@ -394,9 +393,10 @@ export default function AdminPricing() {
   const availW = window.innerWidth - 20;
   const hdrW = h => tw(h, F_HDR, 0.6);
   const cardLayout = gItems => {
-   const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
-   const hasCost = gItems.some(it => it.cost != null);
-   const hasTarget = gItems.some(it => it.target != null);
+   // Board 1 cards always show every column (empty values show as —)
+   const cols = DEF1;
+   const hasCost = true;
+   const hasTarget = true;
    const colW = cols.map(d => Math.min(230, Math.max(hdrW(d.h), ...gItems.map(it => tw(d.h === 'NOTES' ? (d.get(it) || '') : String(d.get(it) || '—').toUpperCase(), d.h === 'MAKE' ? F_MAKE : F_ROW)))) + 2);
    const costW = hasCost ? Math.max(hdrW('COST'), ...gItems.map(it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
    const mktW = Math.max(hdrW('MARKET ₹'), ...gItems.map(it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
