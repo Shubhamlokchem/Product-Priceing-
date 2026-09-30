@@ -52,43 +52,62 @@ const BUBBLES = Array.from({ length: 16 }, (_, i) => ({
 }));
 const SPARKS = [[-120, -80], [110, -95], [-150, 10], [150, 20], [-60, -140], [70, -150], [0, -170], [-100, 90], [110, 80]];
 
-/* ── The walking scientist (lab coat + briefcase), viewBox 0 0 120 220 ── */
+/* ── The walking businessman (orange blazer + briefcase), viewBox 0 0 120 220 ── */
 const Person = () => (
  <svg viewBox="0 0 120 220" aria-hidden="true">
+  <defs>
+   <linearGradient id="lgBlazer" x1="0" x2="1"><stop offset="0" stopColor="#f08a3c" /><stop offset=".55" stopColor="#e8742a" /><stop offset="1" stopColor="#c95d1c" /></linearGradient>
+   <linearGradient id="lgSleeve" x1="0" x2="1"><stop offset="0" stopColor="#f3954a" /><stop offset="1" stopColor="#cf6420" /></linearGradient>
+   <linearGradient id="lgPants" x1="0" x2="1"><stop offset="0" stopColor="#7b8491" /><stop offset="1" stopColor="#5b636f" /></linearGradient>
+   <radialGradient id="lgSkin" cx=".4" cy=".35" r=".75"><stop offset="0" stopColor="#fbd7b8" /><stop offset="1" stopColor="#e9b48f" /></radialGradient>
+   <linearGradient id="lgBag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#8b5427" /><stop offset="1" stopColor="#6a3d19" /></linearGradient>
+  </defs>
   <g className="lg-body">
    {/* back arm */}
    <g className="lg-arm-back">
-    <rect x="35" y="54" width="11" height="58" rx="5.5" fill="#dfe8f2" />
-    <circle cx="40.5" cy="113" r="5.5" fill="#e7b58f" />
+    <rect x="35" y="54" width="12" height="54" rx="6" fill="url(#lgSleeve)" />
+    <rect x="35.5" y="104" width="11" height="5" rx="2" fill="#f1f5f9" />
+    <circle cx="41" cy="113" r="5.5" fill="url(#lgSkin)" />
    </g>
    {/* legs */}
    <g className="lg-leg-b">
-    <rect x="53" y="124" width="13" height="72" rx="6" fill="#1e3a5f" />
-    <ellipse cx="62" cy="199" rx="11" ry="5" fill="#0f172a" />
+    <rect x="49" y="124" width="14" height="72" rx="6" fill="#5b636f" />
+    <path d="M47 194 h16 a6 6 0 0 1 4 6 v1 h-22 v-3 a4 4 0 0 1 2 -4z" fill="#4a2c14" />
    </g>
    <g className="lg-leg-a">
-    <rect x="54" y="124" width="13" height="72" rx="6" fill="#274b78" />
-    <ellipse cx="63" cy="199" rx="11" ry="5" fill="#111827" />
+    <rect x="58" y="124" width="14" height="72" rx="6" fill="url(#lgPants)" />
+    <path d="M58 194 h16 a6 6 0 0 1 4 6 v1 h-22 v-3 a4 4 0 0 1 2 -4z" fill="#5b3a1e" />
    </g>
-   {/* torso: lab coat */}
-   <path d="M40 52 Q60 44 80 52 L86 132 Q60 140 34 132 Z" fill="#ffffff" />
-   <path d="M60 52 L60 134" stroke="#cbd5e1" strokeWidth="1.5" />
-   <path d="M52 50 L60 64 L68 50" fill="#10b981" />
-   <rect x="66" y="78" width="10" height="7" rx="1.5" fill="#1a6db5" />
+   {/* shirt + tie */}
+   <path d="M49 50 L71 50 L68 90 L52 90 Z" fill="#eef2f7" />
+   <path d="M58 52 h4 l1.5 5 -2 26 -1.5 3 -1.5 -3 -2 -26 z" fill="#374151" />
+   {/* blazer */}
+   <path d="M40 54 Q45 50 50 50 L60 92 L70 50 Q75 50 80 54 L86 130 Q72 136 62 134 L60 96 L58 134 Q48 136 34 130 Z" fill="url(#lgBlazer)" />
+   <path d="M50 50 L59 88 L53 58 L46 53 Z" fill="#d0661f" /><path d="M70 50 L61 88 L67 58 L74 53 Z" fill="#b95616" />
+   <circle cx="60" cy="102" r="1.8" fill="#6b7280" /><circle cx="60" cy="114" r="1.8" fill="#6b7280" />
+   <path d="M44 100 h9" stroke="#b95616" strokeWidth="1.5" strokeLinecap="round" />
    {/* head */}
-   <rect x="55" y="40" width="10" height="10" rx="3" fill="#e7b58f" />
-   <circle cx="60" cy="28" r="15" fill="#e7b58f" />
-   <path d="M45 27 Q46 11 60 11 Q75 11 75 26 Q70 18 60 19 Q50 19 45 27 Z" fill="#2b2118" />
-   <circle cx="66" cy="29" r="1.6" fill="#1f2937" />
-   <path d="M64 35 Q67 37 70 35" stroke="#9a5a3c" strokeWidth="1.4" fill="none" strokeLinecap="round" />
+   <rect x="55" y="40" width="10" height="11" rx="3" fill="#e9b48f" />
+   <ellipse cx="43.5" cy="28" rx="3" ry="4.5" fill="#e9b48f" /><ellipse cx="76.5" cy="28" rx="3" ry="4.5" fill="#e9b48f" />
+   <ellipse cx="60" cy="27" rx="16.5" ry="18" fill="url(#lgSkin)" />
+   <path d="M43.5 24 Q42 9 56 7 Q66 3 73 10 Q79 16 76.5 25 Q73 15 63 16 Q58 12 52 15 Q46 17 43.5 24 Z" fill="#6b4226" />
+   <path d="M55 8 Q62 1 70 7 Q64 6 60 10 Z" fill="#7d4f2e" />
+   <path d="M49 22 q4 -2.5 8 0" stroke="#4a2c14" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+   <path d="M63 22 q4 -2.5 8 0" stroke="#4a2c14" strokeWidth="1.8" fill="none" strokeLinecap="round" />
+   <ellipse cx="53" cy="28" rx="3.2" ry="3.6" fill="#fff" /><ellipse cx="67" cy="28" rx="3.2" ry="3.6" fill="#fff" />
+   <circle cx="53.6" cy="28.6" r="2" fill="#3b2a1a" /><circle cx="67.6" cy="28.6" r="2" fill="#3b2a1a" />
+   <circle cx="54.2" cy="27.8" r=".7" fill="#fff" /><circle cx="68.2" cy="27.8" r=".7" fill="#fff" />
+   <path d="M59 33 q1 2 2.5 0" stroke="#d99a76" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+   <path d="M54.5 37 Q60 41.5 65.5 37" stroke="#a0522d" strokeWidth="1.6" fill="none" strokeLinecap="round" />
    {/* front arm holding the briefcase */}
    <g className="lg-arm-front">
-    <rect x="74" y="54" width="11" height="58" rx="5.5" fill="#f1f5f9" />
-    <circle cx="79.5" cy="113" r="5.5" fill="#e7b58f" />
+    <rect x="73" y="54" width="12" height="54" rx="6" fill="url(#lgSleeve)" />
+    <rect x="73.5" y="104" width="11" height="5" rx="2" fill="#f8fafc" />
+    <circle cx="79.5" cy="113" r="5.5" fill="url(#lgSkin)" />
     <g className="lg-bag">
-
      <path d="M78 118 v-4 a3 3 0 0 1 3 -3 h8 a3 3 0 0 1 3 3 v4" stroke="#3f2a14" strokeWidth="2.5" fill="none" />
-     <rect x="72" y="124" width="26" height="20" rx="3" fill="#7c4a1e" />
+     <rect x="72" y="124" width="26" height="20" rx="3" fill="url(#lgBag)" />
+     <rect x="72" y="131" width="26" height="1.5" fill="#4a2a10" opacity=".5" />
      <circle className="lg-glow" cx="85" cy="122" r="12" fill="#fef9c3" style={{ mixBlendMode: 'screen' }} />
      <g className="lg-lid">
       <rect x="72" y="118" width="26" height="8" rx="3" fill="#9a5c26" />
@@ -109,17 +128,13 @@ export default function LoginPage() {
  const [showPwd, setShowPwd] = useState(false);
  const emailRef = useRef(null);
 
- // Play the intro once per browser session (and never for reduced-motion users)
- const [skip, setSkip] = useState(() => {
-  let seen = false;
-  try { seen = sessionStorage.getItem('lgIntroSeen') === '1'; } catch { /* ignore */ }
-  const reduced = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return seen || reduced;
- });
+ // Play the intro every time the login page opens (incl. after logout); off for reduced-motion users
+ const [skip, setSkip] = useState(() =>
+  typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+ );
  const [introDone, setIntroDone] = useState(skip);
 
  useEffect(() => {
-  try { sessionStorage.setItem('lgIntroSeen', '1'); } catch { /* ignore */ }
   if (introDone) { emailRef.current?.focus(); return; }
   const t = setTimeout(() => setIntroDone(true), 3700);
   return () => clearTimeout(t);
@@ -174,7 +189,7 @@ export default function LoginPage() {
 
     <div className="lg-card">
      <div className="auth-logo">
-      <img src="/logo.png" alt="Lok Chemicals" className="auth-logo-img" style={{ maxHeight: 84 }} />
+      <img src="/logo.png" alt="Lok Chemicals" className="auth-logo-img" style={{ maxHeight: 58 }} />
       <h1>Lok Chemicals</h1>
       <p>Pricing CRM Dashboard</p>
      </div>
@@ -208,7 +223,7 @@ export default function LoginPage() {
       {error && <div className="auth-error">{error}</div>}
       <button className="auth-btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
      </form>
-     <p style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: '#9ca3af' }}>Contact your admin to create an account.</p>
+     <p style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: '#9ca3af' }}>Contact your admin to create an account.</p>
     </div>
    </div>
 

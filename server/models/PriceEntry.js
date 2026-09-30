@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 
 const priceEntrySchema = new mongoose.Schema({
   product:   { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
-  price:     { type: Number, required: true },
+  price:     { type: Number, required: true },   // market price
+  cost:      { type: Number, default: null },    // our cost
+  target:    { type: Number, default: null },    // target price
   currency:  { type: String, default: 'INR' },
   date:      { type: String, required: true }, // YYYY-MM-DD
   notes:     { type: String, default: '' },

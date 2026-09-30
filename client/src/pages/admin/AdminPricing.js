@@ -121,7 +121,7 @@ export default function AdminPricing() {
  const [productSearch, setProductSearch] = useState('');
  const [tvMode, setTvMode] = useState(false);   // TV 1: Price Board
  const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Price Board 2 (airport style)
- const TV2_PAGE_SEC = 15;
+ const TV2_PAGE_SEC = 20;
  const [tv2Page, setTv2Page] = useState(0);
  const [tv2Countdown, setTv2Countdown] = useState(TV2_PAGE_SEC);
  useEffect(() => {
@@ -230,17 +230,15 @@ export default function AdminPricing() {
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
   const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
   const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - 24;
-  // 1 column while everything fits; 2 columns only when the first is full; max 2 → extra goes to next screen
-  const ROW_1 = 32, ROW_2 = 40;                       // 2-column rows are taller so long names can wrap
-  const fit1 = Math.max(1, Math.floor(boardH / ROW_1));
-  const twoCols = rows2.length > fit1;
-  const ROW_H2 = twoCols ? ROW_2 : ROW_1;
-  const perPanel = twoCols ? Math.max(1, Math.floor(boardH / ROW_2)) : fit1;
-  const perPage = twoCols ? perPanel * 2 : perPanel;
+  // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
+  const twoCols = false;
+  const ROW_H2 = 34;
+  const perPanel = Math.max(1, Math.floor(boardH / ROW_H2));
+  const perPage = perPanel;
   const pages2 = Math.max(1, Math.ceil(rows2.length / perPage));
   const cur2 = tv2Page % pages2;
   const pageRows = rows2.slice(cur2 * perPage, cur2 * perPage + perPage);
-  const panels = pageRows.length > perPanel ? [pageRows.slice(0, perPanel), pageRows.slice(perPanel)] : [pageRows];
+  const panels = [pageRows];
   // text columns flex, short columns fixed so headers + values always show in full
   // Column definitions — optional columns appear only if at least one product has data for them
   const DEF2 = [
@@ -250,7 +248,9 @@ export default function AdminPricing() {
    { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd' } },
    { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc' } },
    { h: 'PACK',    get: it => it.product.itemPackage, w: ['100px', '60px'], wrap: true, st: { color: '#a7f3d0' } },
-   { h: 'PRICE ₹', get: it => it.price.toLocaleString(), w: ['110px', '76px'], always: true, align: 'right', price: true },
+   { h: 'COST ₹',   get: it => (it.cost != null ? Number(it.cost).toLocaleString() : ''),     w: ['110px', '76px'], align: 'right', st: { color: '#cbd5e1' } },
+   { h: 'MARKET ₹', get: it => it.price.toLocaleString(), w: ['120px', '80px'], always: true, align: 'right', price: true },
+   { h: 'TARGET ₹', get: it => (it.target != null ? Number(it.target).toLocaleString() : ''), w: ['110px', '76px'], align: 'right', st: { color: '#c4b5fd', fontWeight: 900 } },
    { h: 'UNIT',    get: it => it.product.unit,        w: ['70px', '46px'],  always: true, align: 'center', st: { color: '#93c5fd' } },
    { h: 'EX',      get: it => it.ex,                  w: ['70px', '60px'],  align: 'center' },
    { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
@@ -462,14 +462,18 @@ export default function AdminPricing() {
             </div>
             {(() => {
              const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
-             const grid = [...cols.map(d => d.w), cols.length ? 'auto' : 'minmax(0,1fr)', '40px', '52px'].join(' ');
+             const hasCost = gItems.some(it => it.cost != null);
+             const hasTarget = gItems.some(it => it.target != null);
+             const grid = [...cols.map(d => d.w), ...(hasCost ? ['auto'] : []), cols.length ? 'auto' : 'minmax(0,1fr)', ...(hasTarget ? ['auto'] : []), '40px', '52px'].join(' ');
              const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
              return (
               <>
                {/* Column headers (only the columns this card uses) */}
                <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: 8, alignItems: 'center', height: COLHDR_H1, padding: '0 11px', background: '#e8f0fb', borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
                 {cols.map(d => <span key={d.h} style={cellS}>{d.h}</span>)}
-                <span style={{ ...cellS, textAlign: 'right' }}>PRICE ₹</span>
+                {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST</span>}
+                <span style={{ ...cellS, textAlign: 'right' }}>MARKET ₹</span>
+                {hasTarget && <span style={{ ...cellS, textAlign: 'right' }}>TARGET</span>}
                 <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>
                 <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>
                </div>
@@ -479,7 +483,9 @@ export default function AdminPricing() {
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...cellS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
                  ))}
+                 {hasCost && <span style={{ fontSize: 13, fontWeight: 800, color: '#475569', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
+                 {hasTarget && <span style={{ fontSize: 13, fontWeight: 800, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{item.product.unit}</span>
                  <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right', textTransform: 'none' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
                 </div>

@@ -115,12 +115,12 @@ export default function AdminProducts() {
  // Build latest price map for fallback display
  const latestMap = {};
  latestRes.data.forEach(e => {
-  latestMap[e.product._id] = { price: e.price ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
+  latestMap[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: e.target ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
  });
 
  const pm = {}, om = {};
  priceRes.data.forEach(e => {
- pm[e.product._id] = { price: e.price ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
+ pm[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: e.target ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
  om[e.product._id] = e.price;
  });
 
@@ -176,17 +176,19 @@ export default function AdminProducts() {
  try {
  const { data: newProduct } = await api.post('/products', { ...inlineForm, group });
  // Save price for selected date if entered
- if (inlineForm.price && !isNaN(Number(inlineForm.price))) {
+ if ((inlineForm.price && !isNaN(Number(inlineForm.price))) || inlineForm.cost || inlineForm.target) {
   await api.post('/prices', {
    productId: newProduct._id,
-   price: Number(inlineForm.price),
+   price: inlineForm.price !== '' ? Number(inlineForm.price) : null,
+   cost: inlineForm.cost || null,
+   target: inlineForm.target || null,
    notes: inlineForm.notes || '',
    ex: inlineForm.ex || '',
    date
   });
  }
  setAddingInGroup(null);
- setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' });
+ setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', cost: '', target: '', notes: '', ex: '' });
  loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Add failed' }); }
  };
@@ -223,10 +225,10 @@ export default function AdminProducts() {
  setSaving(true); setMsg(null);
  try {
  const toSave = products.filter(p => {
- const cur = priceMap[p._id]?.price;
+ const pm = priceMap[p._id] || {};
+ const filled = v => v !== '' && v !== undefined && v !== null;
  const had = origMap[p._id] != null;
- const isLatest = priceMap[p._id]?.isLatest;
- return !isLatest && ((cur !== '' && cur !== undefined) || had);
+ return !pm.isLatest && (filled(pm.price) || filled(pm.cost) || filled(pm.target) || had);
  });
  if (!toSave.length) { setSaving(false); return; }
 
@@ -235,6 +237,8 @@ export default function AdminProducts() {
  return {
  productId: p._id,
  price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null,
+ cost: priceMap[p._id]?.cost ?? null,
+ target: priceMap[p._id]?.target ?? null,
  notes: priceMap[p._id]?.notes || '',
  ex: priceMap[p._id]?.ex || '',
  };
@@ -250,7 +254,7 @@ export default function AdminProducts() {
  const saveRowPrice = async (productId) => {
  const raw = priceMap[productId]?.price;
  try {
-  await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
+  await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, cost: priceMap[productId]?.cost ?? null, target: priceMap[productId]?.target ?? null, notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
   setMsg({ type: 'success', text: 'Price saved!' });
   loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Save failed' }); }
@@ -795,7 +799,7 @@ export default function AdminProducts() {
  <tr>
  <th style={{ width: 32, padding: '8px 6px' }} />
  <th>Make</th><th>COO</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
- <th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Price (₹) *</th><th>EX</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Updated</th><th style={{ width: 120 }}>Actions</th>
+ <th style={{ color: '#64748b', whiteSpace: 'nowrap' }}>Cost (₹)</th><th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>EX</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Updated</th><th style={{ width: 120 }}>Actions</th>
  </tr>
  </thead>
  <tbody>
@@ -855,7 +859,14 @@ export default function AdminProducts() {
  </td>
  </>
  )}
- {/* Price input — always editable */}
+ {/* Cost input */}
+ <td>
+ <input type="number" step="0.01" min="0" className="price-input" placeholder="—"
+  value={priceMap[p._id]?.cost ?? ''} title="Our cost price"
+  style={{ borderColor: '#cbd5e1', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.cost !== '' ? '#fffbeb' : undefined }}
+  onChange={e => handlePrice(p._id, 'cost', e.target.value)} />
+ </td>
+ {/* Market price input — always editable */}
  <td>
  <input type="number" step="0.01" min="0" className="price-input"
  placeholder="—"
@@ -863,6 +874,13 @@ export default function AdminProducts() {
  title={priceMap[p._id]?.isLatest ? `Last price: ₹${priceMap[p._id]?.price} (${fmtDate(priceMap[p._id]?.updatedAt || priceMap[p._id]?.entryDate)})` : ''}
  style={{ borderColor: priceMap[p._id]?.isLatest ? '#fbbf24' : undefined, background: priceMap[p._id]?.isLatest ? '#fffbeb' : undefined }}
  onChange={e => handlePrice(p._id, 'price', e.target.value)} />
+ </td>
+ {/* Target input */}
+ <td>
+ <input type="number" step="0.01" min="0" className="price-input" placeholder="—"
+  value={priceMap[p._id]?.target ?? ''} title="Target selling price"
+  style={{ borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
+  onChange={e => handlePrice(p._id, 'target', e.target.value)} />
  </td>
  {/* EX location — always editable */}
  <td>
@@ -896,7 +914,7 @@ export default function AdminProducts() {
              <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap' }}>
               <button title="Save price" className="btn btn-sm btn-accent" style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => saveRowPrice(p._id)}><IconCheck /></button>
               <button title="Edit product details" className="btn btn-sm btn-primary" style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => { setEditingId(p._id); setEditMap(m => ({ ...m, [p._id]: { make: p.make, coo: p.coo, grade: p.grade, purity: p.purity, itemPackage: p.itemPackage, unit: p.unit } })); }}><IconEdit /></button>
-              <button title="Add variant" className="btn btn-sm" style={{ background: '#f0fff4', color: '#16a34a', border: '1.5px solid #86efac', padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => { setAddingInGroup(addingInGroup === group ? null : group); setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' }); }}><IconPlus /></button>
+              <button title="Add variant" className="btn btn-sm" style={{ background: '#f0fff4', color: '#16a34a', border: '1.5px solid #86efac', padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => { setAddingInGroup(addingInGroup === group ? null : group); setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', cost: '', target: '', notes: '', ex: '' }); }}><IconPlus /></button>
               <button title="Delete product" className="btn btn-sm btn-danger" style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => deleteProduct(p._id)}><IconTrash /></button>
              </div>
             )}
@@ -941,8 +959,16 @@ export default function AdminProducts() {
             </select>
            </td>
            <td>
-            <input type="number" min="0" step="0.01" placeholder="Price ₹" value={inlineForm.price} onChange={e => setInlineForm(f => ({ ...f, price: e.target.value }))}
+            <input type="number" min="0" step="0.01" placeholder="Cost ₹" value={inlineForm.cost || ''} onChange={e => setInlineForm(f => ({ ...f, cost: e.target.value }))}
+             style={{ width: 75, padding: '4px 6px', border: '1.5px solid #cbd5e1', borderRadius: 6, fontSize: 12 }} />
+           </td>
+           <td>
+            <input type="number" min="0" step="0.01" placeholder="Market ₹" value={inlineForm.price} onChange={e => setInlineForm(f => ({ ...f, price: e.target.value }))}
              style={{ width: 80, padding: '4px 6px', border: '1.5px solid #f59e0b', borderRadius: 6, fontSize: 12, background: '#fffbeb' }} />
+           </td>
+           <td>
+            <input type="number" min="0" step="0.01" placeholder="Target ₹" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
+             style={{ width: 75, padding: '4px 6px', border: '1.5px solid #c4b5fd', borderRadius: 6, fontSize: 12 }} />
            </td>
            <td>
             <select value={inlineForm.ex || ''} onChange={e => setInlineForm(f => ({ ...f, ex: e.target.value }))}
@@ -960,7 +986,7 @@ export default function AdminProducts() {
            <td>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
              <button title="Add product permanently — grade &amp; make saved forever, only price needs updating next time" className="btn btn-sm btn-accent" style={{ padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => submitInlineAdd(group)}><IconCheck /> Add</button>
-             <button title="Cancel" className="btn btn-sm btn-danger" style={{ padding: '5px 8px' }} onClick={() => { setAddingInGroup(null); setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', notes: '', ex: '' }); }}><IconX /></button>
+             <button title="Cancel" className="btn btn-sm btn-danger" style={{ padding: '5px 8px' }} onClick={() => { setAddingInGroup(null); setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', cost: '', target: '', notes: '', ex: '' }); }}><IconX /></button>
             </div>
            </td>
           </tr>

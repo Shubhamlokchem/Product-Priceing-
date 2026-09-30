@@ -2,6 +2,9 @@ const router = require('express').Router();
 const PriceEntry = require('../models/PriceEntry');
 const Product = require('../models/Product');
 const { protect, adminOnly } = require('../middleware/auth');
+const numOrNull = v => (v !== null && v !== undefined && v !== '' && !isNaN(v)) ? Number(v) : null;
+// Cost / target are internal — only admins receive them
+const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; delete obj.target; } return obj; };
 
 // Get latest prices for all products
 router.get('/latest', protect, async (req, res) => {
@@ -9,15 +12,17 @@ router.get('/latest', protect, async (req, res) => {
     const products = await Product.find({ isActive: true });
     const result = await Promise.all(products.map(async (product) => {
       const latest = await PriceEntry.findOne({ product: product._id }).sort({ date: -1 }).lean();
-      return {
+      return hideInternal(req, {
         product,
         price:     latest?.price     ?? null,
+        cost:      latest?.cost      ?? null,
+        target:    latest?.target    ?? null,
         currency:  latest?.currency  ?? 'INR',
         date:      latest?.date      ?? null,
         notes:     latest?.notes     ?? '',
         ex:        latest?.ex        ?? '',
         updatedAt: latest?.updatedAt ?? null,
-      };
+      });
     }));
     res.json(result);
   } catch (err) {
@@ -37,15 +42,17 @@ router.get('/date/:date', protect, async (req, res) => {
 
     const result = products.map(product => {
       const entry = entryMap[product._id.toString()];
-      return {
+      return hideInternal(req, {
         product,
         price:     entry?.price     ?? null,
+        cost:      entry?.cost      ?? null,
+        target:    entry?.target    ?? null,
         currency:  entry?.currency  ?? 'INR',
         date:      entry ? req.params.date : null,
         notes:     entry?.notes     ?? '',
         ex:        entry?.ex        ?? '',
         updatedAt: entry?.updatedAt ?? null,
-      };
+      });
     });
 
     res.json(result);
@@ -170,13 +177,13 @@ router.get('/available-dates', protect, async (req, res) => {
 // Admin: Set/update single price
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { productId, price, date, currency, notes, ex } = req.body;
+    const { productId, price, date, currency, notes, ex, cost, target } = req.body;
     if (!productId || price === undefined || !date)
       return res.status(400).json({ message: 'productId, price and date are required' });
 
     const entry = await PriceEntry.findOneAndUpdate(
       { product: productId, date },
-      { price, currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
+      { price: numOrNull(price), cost: numOrNull(cost), target: numOrNull(target), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
       { upsert: true, new: true }
     ).populate('product');
     res.json(entry);
@@ -193,11 +200,11 @@ router.post('/bulk', protect, adminOnly, async (req, res) => {
       return res.status(400).json({ message: 'date and prices array required' });
 
     const results = await Promise.all(
-      prices.map(({ productId, price, notes, currency, ex }) => {
+      prices.map(({ productId, price, notes, currency, ex, cost, target }) => {
         const priceValue = (price !== null && price !== undefined && !isNaN(price)) ? price : null;
         return PriceEntry.findOneAndUpdate(
           { product: productId, date },
-          { price: priceValue, currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
+          { price: priceValue, cost: numOrNull(cost), target: numOrNull(target), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
           { upsert: true, new: true }
         );
       })
