@@ -228,44 +228,61 @@ export default function AdminPricing() {
    .filter(i => i.price !== null)
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
-  const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, ROW_H2 = 32, PANEL_GAP = 12;
-  const PANELS = window.innerWidth >= 1500 ? 2 : 1;
-  const perPanel = Math.max(1, Math.floor((window.innerHeight - HDR_H - FOOT_H - COLHDR_H - 20) / ROW_H2));
-  const perPage = perPanel * PANELS;
+  const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
+  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - 24;
+  // 1 column while everything fits; 2 columns only when the first is full; max 2 → extra goes to next screen
+  const ROW_1 = 32, ROW_2 = 40;                       // 2-column rows are taller so long names can wrap
+  const fit1 = Math.max(1, Math.floor(boardH / ROW_1));
+  const twoCols = rows2.length > fit1;
+  const ROW_H2 = twoCols ? ROW_2 : ROW_1;
+  const perPanel = twoCols ? Math.max(1, Math.floor(boardH / ROW_2)) : fit1;
+  const perPage = twoCols ? perPanel * 2 : perPanel;
   const pages2 = Math.max(1, Math.ceil(rows2.length / perPage));
   const cur2 = tv2Page % pages2;
   const pageRows = rows2.slice(cur2 * perPage, cur2 * perPage + perPage);
-  const panels = Array.from({ length: PANELS }, (_, i) => pageRows.slice(i * perPanel, (i + 1) * perPanel));
-  const COLS = '2.2fr 1.4fr 1fr 1fr 0.9fr 1fr 1.1fr 0.6fr 0.9fr 0.8fr';
-  const HEAD = ['PRODUCT', 'MAKE', 'COO', 'GRADE', 'PURITY', 'PACKING', 'PRICE ₹', 'UNIT', 'EX', 'UPDATED'];
+  const panels = pageRows.length > perPanel ? [pageRows.slice(0, perPanel), pageRows.slice(perPanel)] : [pageRows];
+  // text columns flex, short columns fixed so headers + values always show in full
+  const COLS = twoCols
+   ? 'minmax(0,2.4fr) minmax(0,1.3fr) minmax(0,0.9fr) minmax(0,1.1fr) 58px 60px 76px 46px 60px 58px'
+   : 'minmax(0,2.4fr) minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 90px 100px 110px 70px 70px 90px';
+  const HEAD = ['PRODUCT', 'MAKE', 'COO', 'GRADE', 'PURITY', 'PACK', 'PRICE ₹', 'UNIT', 'EX', 'DATE'];
+  const FS = twoCols ? 12 : 14;
   const mono = "'Consolas','Roboto Mono','Courier New',monospace";
-  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 8px' };
+  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', padding: twoCols ? '0 5px' : '0 8px' };
+  // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
+  const wrap = twoCols ? { whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' } : {};
 
   return (
    <div style={{ position: 'fixed', inset: 0, background: '#04122b', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-    {/* Header */}
-    <div style={{ height: HDR_H, flexShrink: 0, background: 'linear-gradient(180deg, #0b3f8c, #082c63)', borderBottom: '3px solid #fcd34d', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
-     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-       <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
+    {/* Header — same style as Price Board 1 */}
+    <div style={{ height: HDR_H, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0b3f8c 60%, #1d6fd1)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', position: 'relative' }}>
+     <div style={{ height: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+       <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+        <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
+       </div>
+       <div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4, lineHeight: 1.1 }}>
+         Live Product Prices <span style={{ fontSize: 13, fontWeight: 700, color: '#7dd3fc', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 5 }}>
+         <span style={{ fontSize: 12, color: '#e0f2fe', background: 'rgba(255,255,255,0.12)', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>{date}</span>
+         <span style={{ fontSize: 12, color: '#052e16', background: '#4ade80', padding: '2px 10px', borderRadius: 99, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <span style={{ width: 7, height: 7, borderRadius: 99, background: '#052e16', animation: 'tvpulse 1.4s infinite' }} />{rows2.length} LIVE
+         </span>
+         <span style={{ fontSize: 12, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontWeight: 600 }}>↻ {countdown}s</span>
+        </div>
+       </div>
       </div>
-      <div>
-       <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: 2, fontFamily: mono }}>PRICE BOARD</div>
-       <div style={{ fontSize: 12, color: '#fcd34d', fontWeight: 700, letterSpacing: 2 }}>LOK CHEMICALS · LIVE RATES</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+       <LiveClock />
+       <button onClick={() => setTv2Mode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
       </div>
      </div>
-     <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-      <div style={{ textAlign: 'center', fontFamily: mono }}>
-       <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>PAGE</div>
-       <div style={{ fontSize: 18, color: '#fcd34d', fontWeight: 900 }}>{cur2 + 1}/{pages2}</div>
-      </div>
-      <div style={{ textAlign: 'center', fontFamily: mono }}>
-       <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>LIVE</div>
-       <div style={{ fontSize: 18, color: '#4ade80', fontWeight: 900 }}>{rows2.length}</div>
-      </div>
-      <LiveClock />
-      <button onClick={() => setTv2Mode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
+     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
+      {pages2 > 1 && <div style={{ height: '100%', background: 'linear-gradient(90deg,#38bdf8,#fcd34d)', width: `${((TV2_PAGE_SEC - tv2Countdown) / TV2_PAGE_SEC) * 100}%`, transition: 'width 1s linear' }} />}
      </div>
+     <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
     </div>
 
     {/* Board panels */}
@@ -275,21 +292,21 @@ export default function AdminPricing() {
      ) : panels.map((pRows, pi) => (
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
-       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: 12, letterSpacing: 1, fontFamily: mono }}>
-        {HEAD.map((h, i) => <div key={h} style={{ ...cell, textAlign: i >= 6 ? 'center' : 'left' }}>{h}</div>)}
+       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: twoCols ? 11 : 12.5, letterSpacing: twoCols ? 0.5 : 1, fontFamily: mono }}>
+        {HEAD.map((h, i) => <div key={h} style={{ ...cell, textAlign: i === 6 ? 'right' : i >= 7 ? 'center' : 'left' }}>{h}</div>)}
        </div>
        {/* Rows */}
        {pRows.map((it, ri) => {
         const isToday = it.date === today;
         return (
-         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: 14, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
-          <div style={{ ...cell, color: '#fff', fontWeight: 900 }}>{it.product.group}</div>
-          <div style={{ ...cell, color: '#fde68a' }}>{it.product.make || '—'}</div>
-          <div style={cell}>{it.product.coo || '—'}</div>
-          <div style={{ ...cell, color: '#c4b5fd' }}>{it.product.grade || '—'}</div>
+         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
+          <div style={{ ...cell, ...wrap, color: '#fff', fontWeight: 900 }} title={it.product.group}>{it.product.group}</div>
+          <div style={{ ...cell, ...wrap, color: '#fde68a' }}>{it.product.make || '—'}</div>
+          <div style={{ ...cell, ...wrap }}>{it.product.coo || '—'}</div>
+          <div style={{ ...cell, ...wrap, color: '#c4b5fd' }}>{it.product.grade || '—'}</div>
           <div style={{ ...cell, color: '#7dd3fc' }}>{it.product.purity || '—'}</div>
-          <div style={{ ...cell, color: '#a7f3d0' }}>{it.product.itemPackage || '—'}</div>
-          <div style={{ ...cell, textAlign: 'right', color: '#4ade80', fontWeight: 900, fontSize: 16 }}>{it.price.toLocaleString()}</div>
+          <div style={{ ...cell, ...wrap, color: '#a7f3d0' }}>{it.product.itemPackage || '—'}</div>
+          <div style={{ ...cell, textAlign: 'right', color: '#4ade80', fontWeight: 900, fontSize: FS + 2 }}>{it.price.toLocaleString()}</div>
           <div style={{ ...cell, textAlign: 'center', color: '#93c5fd' }}>{it.product.unit}</div>
           <div style={{ ...cell, textAlign: 'center' }}>{it.ex || '—'}</div>
           <div style={{ ...cell, textAlign: 'center', color: isToday ? '#4ade80' : '#fbbf24' }}>{fmtDate(it.updatedAt || it.date) || '—'}</div>
