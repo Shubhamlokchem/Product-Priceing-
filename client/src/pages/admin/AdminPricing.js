@@ -109,7 +109,7 @@ function GroupRow({ group, groupItems }) {
 }
 
 export default function AdminPricing() {
- const today = new Date().toISOString().split('T')[0];
+ const today = new Date().toLocaleDateString('en-CA'); // local date (IST), YYYY-MM-DD
  const [date, setDate] = useState(today);
  const [items, setItems] = useState([]);
  const [groups, setGroups] = useState([]);

@@ -52,9 +52,12 @@ const IconX = () => (
 );
 
 export default function AdminProducts() {
- const today = new Date().toISOString().split('T')[0];
+ const today = new Date().toLocaleDateString('en-CA'); // local date (IST), YYYY-MM-DD
 
  const [date, setDate] = useState(today);
+ const isPastDate = date !== today;
+ const [showAllOnDate, setShowAllOnDate] = useState(false);
+ useEffect(() => { setShowAllOnDate(false); }, [date]);
  const [products, setProducts] = useState([]);
  const [groups, setGroups] = useState([]);
  const [priceMap, setPriceMap] = useState({}); // { productId: { price, notes } }
@@ -124,8 +127,9 @@ export default function AdminProducts() {
  om[e.product._id] = e.price;
  });
 
- // For products with no price today, show latest non-null price as reference
- prodRes.data.forEach(p => {
+ // Only for TODAY: products with no price yet show their latest known price as a reference.
+ // For past dates we show exactly what was saved on that date — nothing carried over.
+ if (date === new Date().toLocaleDateString('en-CA')) prodRes.data.forEach(p => {
   const todayPrice = pm[p._id]?.price;
   const latest = latestMap[p._id];
   if ((todayPrice === null || todayPrice === '' || todayPrice === undefined) && latest?.price !== null && latest?.price !== '' && latest?.price !== undefined) {
@@ -295,15 +299,19 @@ export default function AdminProducts() {
   } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Bulk update failed.' }); }
  };
 
- // Export all products as CSV
+ // Export all products + their prices for the selected date (re-upload this file to update prices)
  const exportProducts = () => {
-  const headers = ['group','make','coo','grade','purity','package','unit'];
-  const rows = products.map(p => [p.group, p.make||'', p.coo||'', p.grade||'', p.purity||'', p.itemPackage||'', p.unit||'kg']);
-  downloadCSV(headers, rows, 'products.csv');
+  const headers = ['id','group','make','coo','grade','purity','package','unit','cost','market','target','ex','notes'];
+  const rows = products.map(p => {
+   const e = priceMap[p._id] || {};
+   return [p._id, p.group, p.make||'', p.coo||'', p.grade||'', p.purity||'', p.itemPackage||'', p.unit||'kg',
+    e.cost ?? '', e.price ?? '', e.target ?? '', e.ex || '', e.notes || ''];
+  });
+  downloadCSV(headers, rows, `products-${date}.csv`);
  };
 
  const downloadSampleCSV = () => {
-  const sample = `group,make,coo,grade,purity,package,unit\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg\nACETONE,SHELL,Netherlands,,,,litre\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg`;
+  const sample = `group,make,coo,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,120\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
   const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
  };
 
@@ -320,14 +328,23 @@ export default function AdminProducts() {
   return out.map(v => v.trim());
  };
 
- // Parse imported CSV and detect duplicates
+ // "1,22,500" / "₹ 555" → 122500 / 555 ; blank → null
+ const toNum = v => {
+  const t = String(v ?? '').replace(/[₹,\s]/g, '');
+  if (t === '') return null;
+  const n = Number(t);
+  return isNaN(n) ? null : n;
+ };
+ const sameNum = (a, b) => (a === '' || a == null ? null : Number(a)) === (b == null ? null : Number(b));
+
+ // Parse CSV → new products / price-unit updates for existing products / unchanged rows
  const handleImportFile = e => {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
    const lines = ev.target.result.trim().split(/\r?\n/);
-   const hdrs = splitCSVLine(lines[0].replace(/^\uFEFF/, '')).map(h => h.toLowerCase());
+   const hdrs = splitCSVLine(lines[0].replace(/^﻿/, '')).map(h => h.toLowerCase().replace(/[^a-z]/g, ''));
    const rows = lines.slice(1)
     .filter(line => line.trim())
     .map(line => {
@@ -335,49 +352,92 @@ export default function AdminProducts() {
      return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
     })
     .filter(r => r.group);
-   // Duplicate only if ALL details match (group, make, COO, grade, purity, package, unit)
-   const keyOf = x => [
-    x.group, x.make, x.coo, x.grade, x.purity,
-    x.itemPackage ?? x.package ?? x.itempackage,
-    x.unit || 'kg',
-   ].map(norm).join('|');
-   const existingKeys = new Set(products.map(keyOf));
-   const seenInFile = new Set();
-   const duplicates = [], unique = [];
+
+   // A product is identified by its id (from Export) or by group + make + COO + grade + purity + package (unit can change)
+   const keyOf = x => [x.group, x.make, x.coo, x.grade, x.purity, x.itemPackage ?? x.package ?? x.itempackage].map(norm).join('|');
+   const byId = Object.fromEntries(products.map(p => [p._id, p]));
+   const byKey = {}; products.forEach(p => { byKey[keyOf(p)] = p; });
+
+   const unique = [], updates = [], duplicates = [];
+   const seenNew = new Set(), seenIds = new Set();
    rows.forEach(row => {
-    const k = keyOf(row);
-    const isDup = existingKeys.has(k) || seenInFile.has(k);
-    seenInFile.add(k);
-    (isDup ? duplicates : unique).push(row);
+    const prod = (row.id && byId[row.id]) || byKey[keyOf(row)];
+    const nums = { cost: toNum(row.cost), price: toNum(row.market ?? row.price), target: toNum(row.target) };
+    if (!prod) {
+     const k = keyOf(row);
+     if (seenNew.has(k)) { duplicates.push(row); return; }
+     seenNew.add(k); unique.push({ ...row, ...nums });
+     return;
+    }
+    if (seenIds.has(prod._id)) { duplicates.push(row); return; }
+    seenIds.add(prod._id);
+    const cur = priceMap[prod._id] || {};
+    const changes = [];
+    const newUnit = (row.unit || '').trim();
+    if (newUnit && norm(newUnit) !== norm(prod.unit)) changes.push({ f: 'Unit', from: prod.unit, to: newUnit });
+    [['cost','Cost'],['price','Market'],['target','Target']].forEach(([k, label]) => {
+     if (nums[k] !== null && !sameNum(cur[k], nums[k])) changes.push({ f: label, from: cur[k] === '' || cur[k] == null ? '—' : cur[k], to: nums[k] });
+    });
+    if (row.ex && row.ex !== (cur.ex || '')) changes.push({ f: 'EX', from: cur.ex || '—', to: row.ex });
+    if (row.notes && row.notes !== (cur.notes || '')) changes.push({ f: 'Notes', from: cur.notes || '—', to: row.notes });
+    if (changes.length) updates.push({ row, prod, nums, newUnit, changes });
+    else duplicates.push(row);
    });
-   setImportModal({ duplicates, unique, loading: false });
+   setImportModal({ unique, updates, duplicates, loading: false });
   };
   reader.readAsText(file);
   e.target.value = '';
  };
 
- // Upload unique products from import
+ // Create new products and apply price / unit updates (prices are saved for the selected date)
  const submitImport = async () => {
-  if (!importModal?.unique.length) return;
-  const rows = importModal.unique;
-  const total = rows.length;
+  const news = importModal?.unique || [], ups = importModal?.updates || [];
+  const total = news.length + ups.length;
+  if (!total) return;
   setImportModal(m => ({ ...m, loading: true, done: 0, total }));
   let ok = 0, failed = 0;
-  for (const row of rows) {
+  const tick = () => setImportModal(m => (m ? { ...m, done: ok + failed } : m));
+  const bulk = [];
+
+  for (const row of news) {
    try {
-    await api.post('/products', {
+    const { data: np } = await api.post('/products', {
      group: row.group, make: row.make||'', coo: row.coo||'',
      grade: row.grade||'', purity: row.purity||'',
      itemPackage: row.package||row.itempackage||'', unit: row.unit||'kg',
     });
+    if (row.price !== null || row.cost !== null || row.target !== null)
+     bulk.push({ productId: np._id, price: row.price, cost: row.cost, target: row.target, ex: row.ex || '', notes: row.notes || '' });
     ok++;
    } catch { failed++; }
-   const done = ok + failed;
-   setImportModal(m => (m ? { ...m, done } : m));
+   tick();
+  }
+
+  for (const u of ups) {
+   try {
+    if (u.newUnit && norm(u.newUnit) !== norm(u.prod.unit)) await api.put(`/products/${u.prod._id}`, { unit: u.newUnit });
+    const cur = priceMap[u.prod._id] || {};
+    const keep = v => (v === '' || v === undefined ? null : v);
+    const priceTouched = u.changes.some(c => ['Cost', 'Market', 'Target', 'EX', 'Notes'].includes(c.f));
+    if (priceTouched) bulk.push({
+     productId: u.prod._id,
+     price:  u.nums.price  ?? keep(cur.price),
+     cost:   u.nums.cost   ?? keep(cur.cost),
+     target: u.nums.target ?? keep(cur.target),
+     ex: u.row.ex || cur.ex || '', notes: u.row.notes || cur.notes || '',
+    });
+    ok++;
+   } catch { failed++; }
+   tick();
+  }
+
+  if (bulk.length) {
+   try { await api.post('/prices/bulk', { date, prices: bulk }); }
+   catch { setMsg({ type: 'error', text: 'Products saved, but saving prices failed — please try again.' }); setImportModal(null); loadData(true); return; }
   }
   setMsg(failed
-   ? { type: 'error', text: `${ok} of ${total} products imported. ${failed} failed — please check and try again.` }
-   : { type: 'success', text: `${ok} products imported successfully.` });
+   ? { type: 'error', text: `${ok} of ${total} rows done (${news.length} new, ${ups.length} updates). ${failed} failed — please check and try again.` }
+   : { type: 'success', text: `Import done for ${date}: ${news.length} new product${news.length !== 1 ? 's' : ''} added, ${ups.length} updated.` });
   setImportModal(null);
   loadData(true);
  };
@@ -385,7 +445,10 @@ export default function AdminProducts() {
  const toggleExpand = g => setExpandedGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
  const toggleFilterGroup = g => setFilterGroups(prev => { const n = new Set(prev); n.has(g) ? n.delete(g) : n.add(g); return n; });
 
+ const filledV = v => v !== '' && v !== undefined && v !== null;
+ const pricedOnDate = p => { const e = priceMap[p._id]; return !!e && !e.isLatest && (filledV(e.price) || filledV(e.cost) || filledV(e.target)); };
  const filtered = products.filter(p => {
+ if (isPastDate && !showAllOnDate && !pricedOnDate(p)) return false;
  const matchGroup = filterGroups.size === 0 || filterGroups.has(p.group);
  const matchProduct = filterProducts.size === 0 || filterProducts.has(p.group);
  const q = norm(search);
@@ -436,8 +499,21 @@ export default function AdminProducts() {
    <div style={{ flex: 1 }} />
 
    {/* Date */}
-   <input type="date" value={date} onChange={e => setDate(e.target.value)} max={today}
-    style={{ padding: '6px 8px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, flexShrink: 0 }} />
+   <input type="date" value={date} onChange={e => setDate(e.target.value || today)} max={today}
+    style={{ padding: '6px 8px', border: `1.5px solid ${isPastDate ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, flexShrink: 0, background: isPastDate ? '#fffbeb' : '#fff' }} />
+   {isPastDate && (
+    <>
+     <button onClick={() => setShowAllOnDate(v => !v)}
+      title={showAllOnDate ? 'Show only products priced on this date' : 'Show all products to add/edit prices for this date'}
+      style={{ padding: '6px 10px', border: '1.5px solid #fde68a', borderRadius: 7, fontSize: 11.5, background: showAllOnDate ? '#fef3c7' : '#fff', color: '#92400e', fontWeight: 700, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+      {showAllOnDate ? 'Only priced' : 'Show all products'}
+     </button>
+     <button onClick={() => setDate(today)}
+      style={{ padding: '6px 10px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 11.5, background: '#fff', color: '#1a3a6b', fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}>
+      Today
+     </button>
+    </>
+   )}
 
    {/* Product multi-select search */}
    <div style={{ position: 'relative', flexShrink: 0 }} ref={productDDRef}>
@@ -618,7 +694,9 @@ export default function AdminProducts() {
        <div style={{ fontSize: 15, fontWeight: 700, color: '#1a3a6b' }}>Import Preview</div>
        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
         <span style={{ color: '#16a34a', fontWeight: 600 }}>{importModal.unique.length} new</span>
-        {importModal.duplicates.length > 0 && <> · <span style={{ color: '#dc2626', fontWeight: 600 }}>{importModal.duplicates.length} duplicate{importModal.duplicates.length > 1 ? 's' : ''} (will be skipped)</span></>}
+        {' · '}<span style={{ color: '#1d4ed8', fontWeight: 600 }}>{importModal.updates.length} to update</span>
+        {importModal.duplicates.length > 0 && <> · <span style={{ color: '#6b7280', fontWeight: 600 }}>{importModal.duplicates.length} unchanged (skipped)</span></>}
+        <span style={{ marginLeft: 6, color: '#b45309' }}>· prices saved for {date}</span>
        </div>
       </div>
       <button onClick={() => setImportModal(null)} disabled={importModal.loading} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', lineHeight: 1 }}>✕</button>
@@ -640,21 +718,33 @@ export default function AdminProducts() {
        </div>
       )}
 
-      {/* Duplicates */}
-      {importModal.duplicates.length > 0 && (
-       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
-         ⚠ Already exist — will be skipped ({importModal.duplicates.length})
+      {/* Updates to existing products */}
+      {importModal.updates.length > 0 && (
+       <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#1d4ed8', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+         ✎ Will be updated ({importModal.updates.length})
         </div>
-        {importModal.duplicates.map((r, i) => (
-         <div key={i} style={{ fontSize: 12, padding: '5px 10px', background: '#fef2f2', borderRadius: 6, marginBottom: 3, color: '#b91c1c', border: '1px solid #fecaca' }}>
-          <strong>{r.group}</strong>{r.make ? ` · ${r.make}` : ''}{r.coo ? ` (${r.coo})` : ''}{r.grade ? ` · ${r.grade}` : ''}
+        {importModal.updates.map((u, i) => (
+         <div key={i} style={{ fontSize: 12, padding: '5px 10px', background: '#eff6ff', borderRadius: 6, marginBottom: 3, color: '#1e3a8a', border: '1px solid #bfdbfe' }}>
+          <strong>{u.prod.group}</strong>{u.prod.make ? ` · ${u.prod.make}` : ''}{u.prod.coo ? ` (${u.prod.coo})` : ''}
+          <span style={{ marginLeft: 6 }}>
+           {u.changes.map((c, j) => (
+            <span key={j} style={{ marginRight: 8, whiteSpace: 'nowrap' }}><b>{c.f}:</b> <span style={{ color: '#94a3b8', textDecoration: 'line-through' }}>{String(c.from)}</span> → <b style={{ color: '#15803d' }}>{String(c.to)}</b></span>
+           ))}
+          </span>
          </div>
         ))}
        </div>
       )}
 
-      {importModal.unique.length === 0 && importModal.duplicates.length === 0 && (
+      {/* Unchanged */}
+      {importModal.duplicates.length > 0 && (
+       <div style={{ fontSize: 12, color: '#6b7280', padding: '6px 10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6 }}>
+        {importModal.duplicates.length} row{importModal.duplicates.length > 1 ? 's are' : ' is'} already up to date — skipped.
+       </div>
+      )}
+
+      {importModal.unique.length === 0 && importModal.updates.length === 0 && importModal.duplicates.length === 0 && (
        <div style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '24px 0' }}>No valid rows found in CSV.</div>
       )}
      </div>
@@ -677,11 +767,16 @@ export default function AdminProducts() {
 
      {/* Footer buttons */}
      <div style={{ display: 'flex', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid #e5e7eb' }}>
-      <button onClick={submitImport}
-       disabled={importModal.loading || !importModal.unique.length}
-       style={{ flex: 1, padding: '9px', background: importModal.unique.length ? '#16a34a' : '#e5e7eb', color: importModal.unique.length ? '#fff' : '#9ca3af', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: importModal.unique.length ? 'pointer' : 'default' }}>
-       {importModal.loading ? `Importing… ${importModal.total ? Math.round((importModal.done / importModal.total) * 100) : 0}%` : `Import ${importModal.unique.length} New Product${importModal.unique.length !== 1 ? 's' : ''}`}
-      </button>
+      {(() => {
+       const n = importModal.unique.length + importModal.updates.length;
+       const label = [importModal.unique.length ? `Add ${importModal.unique.length} new` : '', importModal.updates.length ? `Update ${importModal.updates.length}` : ''].filter(Boolean).join(' + ');
+       return (
+        <button onClick={submitImport} disabled={importModal.loading || !n}
+         style={{ flex: 1, padding: '9px', background: n ? '#16a34a' : '#e5e7eb', color: n ? '#fff' : '#9ca3af', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: n ? 'pointer' : 'default' }}>
+         {importModal.loading ? `Importing… ${importModal.total ? Math.round((importModal.done / importModal.total) * 100) : 0}%` : (n ? label : 'Nothing to import')}
+        </button>
+       );
+      })()}
       <button onClick={() => setImportModal(null)} disabled={importModal.loading}
        style={{ padding: '9px 20px', background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>
        Cancel
@@ -753,7 +848,11 @@ export default function AdminProducts() {
   )}
 
   {/* Product + Price table grouped */}
-  {loading && products.length === 0 ? <div className="spinner">Loading...</div> : (
+  {loading && products.length === 0 ? <div className="spinner">Loading...</div> : isPastDate && !showAllOnDate && Object.keys(grouped).length === 0 ? (
+   <div style={{ background: '#fff', border: '1px dashed #fcd34d', borderRadius: 10, padding: '28px 16px', textAlign: 'center', color: '#92400e', fontSize: 13 }}>
+    No prices were saved on <b>{date}</b>. Click <b>Show all products</b> to add prices for this date, or <b>Today</b> to go back.
+   </div>
+  ) : (
   Object.entries(grouped).map(([group, items]) => {
   const isOpen = expandedGroups.has(group);
   const pv = p => { const v = priceMap[p._id]?.price; return v !== '' && v !== undefined && v !== null; };
