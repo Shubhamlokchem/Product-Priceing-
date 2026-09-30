@@ -374,9 +374,7 @@ export default function AdminPricing() {
 
   // Card height depends on its rows → pack cards into 5 columns, new page when full
   const HEAD_H = 32, ROW_H = 28, ROW_H2L = 40;   // row grows to 2 lines when text needs it
-  let COLHDR_H1 = 22;
-  let rowHOf = () => ROW_H;
-  // Card columns — all shown on every card
+  // Card columns — each card shows only the ones it has data for
   const DEF1 = [
    { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
    { h: 'COO',    get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
@@ -385,53 +383,70 @@ export default function AdminPricing() {
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
    { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
   ];
-  // Two equal-width card columns. Column widths inside cards are measured once over ALL
-  // products so every card lines up identically; card height follows its number of rows.
+  // Fixed grid: 3 columns × 3 rows of equal-size cards (9 per page).
+  // Each card shows only the columns it has data for, sized to its own content.
+  const GRID_COLS = 3, GRID_ROWS = 3;
   const mctx = document.createElement('canvas').getContext('2d');
   const tw = (t, font, ls = 0) => { mctx.font = font; const str = String(t ?? ''); return Math.ceil(mctx.measureText(str).width + ls * str.length); };
   const F_ROW = "700 12px 'Segoe UI', sans-serif", F_MAKE = "800 13.5px 'Segoe UI', sans-serif", F_HDR = "800 9.5px 'Segoe UI', sans-serif";
   const F_SMALLP = "800 13px 'Segoe UI', sans-serif", F_BIGP = "900 18px 'Segoe UI', sans-serif";
   const CGAP = 6, UNIT_W = 38, DATE_W = 52;
   const hdrW = h => tw(h, F_HDR, 0.6);
-  const allItems = allGroups.flatMap(([, gi]) => gi);
   const maxOf = (arr, f) => arr.reduce((m, x) => Math.max(m, f(x)), 0);
-  const colW = DEF1.map(d => Math.min(200, Math.max(hdrW(d.h), maxOf(allItems, it => tw(String(d.get(it) || '—').toUpperCase(), d.h === 'MAKE' ? F_MAKE : F_ROW)))) + 2);
-  const costW = Math.max(hdrW('COST'), maxOf(allItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2;
-  const mktW  = Math.max(hdrW('MARKET ₹'), maxOf(allItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
-  const tgtW  = Math.max(hdrW('TARGET'), maxOf(allItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2;
-  // Fixed number columns; text columns share what's left (never narrower than their longest single word)
-  const cardInnerW = (window.innerWidth - 20 - GAP) / 2 - 20;
-  const fixedW = costW + mktW + tgtW + UNIT_W + DATE_W + CGAP * (DEF1.length + 4);
-  const textAvail = Math.max(100, cardInnerW - fixedW);
-  const longestWord = d => Math.min(110, Math.max(hdrW(d.h.split(' ')[0]), maxOf(allItems, it => maxOf(String(d.get(it) || '—').toUpperCase().split(/\s+/), w => tw(w, d.h === 'MAKE' ? F_MAKE : F_ROW))))) + 2;
-  const minW = DEF1.map(longestWord);
-  const sumW = colW.reduce((a, b) => a + b, 0);
-  let colPx = colW.map((w, i) => Math.max(minW[i], (textAvail * w) / sumW));
-  const over = colPx.reduce((a, b) => a + b, 0) - textAvail;
-  if (over > 0) { // trim the columns that have spare room above their minimum
-   const spare = colPx.map((w, i) => w - minW[i]); const tot = spare.reduce((a, b) => a + b, 0) || 1;
-   colPx = colPx.map((w, i) => w - (over * spare[i]) / tot);
-  }
-  const CARD_GRID = [...colPx.map(w => `${Math.floor(w)}px`), `${costW}px`, `${mktW}px`, `${tgtW}px`, `${UNIT_W}px`, `${DATE_W}px`].join(' ');
-  // header wraps if a label is wider than its column; rows wrap when a value is
-  COLHDR_H1 = DEF1.some((d, i) => hdrW(d.h) > colPx[i]) ? 30 : 22;
-  rowHOf = it => (DEF1.some((d, i) => tw(String(d.get(it) || '—').toUpperCase(), d.h === 'MAKE' ? F_MAKE : F_ROW) > colPx[i]) ? ROW_H2L : ROW_H);
-
-  // Fixed grid: 2 columns × 3 rows of equal-size cards (6 per page).
-  // A product with more variants than one card holds continues on the next card: "(1/2)", "(2/2)".
-  const GRID_COLS = 2, GRID_ROWS = 3;
+  const txt = (d, it) => String(d.get(it) || '—').toUpperCase();
+  const fnt = d => (d.h === 'MAKE' ? F_MAKE : F_ROW);
+  const cardInnerW = (window.innerWidth - 20 - GAP * (GRID_COLS - 1)) / GRID_COLS - 20;
   const cellH = Math.floor((availH - GAP * (GRID_ROWS - 1)) / GRID_ROWS);
-  const bodyH = cellH - HEAD_H - COLHDR_H1 - 2;
+
+  const layoutFor = gItems => {
+   const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
+   const hasCost = gItems.some(it => it.cost != null);
+   const hasTarget = gItems.some(it => it.target != null);
+   const colW = cols.map(d => Math.min(200, Math.max(hdrW(d.h), maxOf(gItems, it => tw(txt(d, it), fnt(d))))) + 2);
+   const costW = hasCost ? Math.max(hdrW('COST'), maxOf(gItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const mktW = Math.max(hdrW('MARKET ₹'), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
+   const tgtW = hasTarget ? Math.max(hdrW('TARGET'), maxOf(gItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + 2;
+   const fixedW = costW + mktW + tgtW + UNIT_W + DATE_W + CGAP * (nCols - 1);
+   // every text column must fit its longest single word (words never split)
+   const minW = cols.map(d => Math.min(150, Math.max(hdrW(d.h.split(' ')[0]), maxOf(gItems, it => maxOf(txt(d, it).split(/\s+/), w => tw(w, fnt(d)))))) + 2);
+   const reqMin = minW.reduce((a, b) => a + b, 0) + fixedW;
+   // if the card is too narrow, shrink this card's table a little instead of cutting text
+   const scale = Math.min(1, cardInnerW / reqMin);
+   const innerW = cardInnerW / scale;
+   const textAvail = innerW - fixedW;
+   // start every column at its minimum, share the extra space towards each column's full width
+   let colPx = [...minW];
+   let extra = textAvail - colPx.reduce((a, b) => a + b, 0);
+   const want = colW.map((w, i) => Math.max(0, w - minW[i]));
+   const wantSum = want.reduce((a, b) => a + b, 0);
+   if (extra > 0 && wantSum > 0) { const give = Math.min(extra, wantSum); colPx = colPx.map((w, i) => w + (give * want[i]) / wantSum); extra -= give; }
+   if (extra > 0 && colPx.length) colPx[0] += extra;
+   const grid = [
+    ...colPx.map(w => `${Math.floor(w)}px`),
+    ...(hasCost ? [`${costW}px`] : []),
+    cols.length ? `${mktW}px` : `minmax(${mktW}px, 1fr)`,
+    ...(hasTarget ? [`${tgtW}px`] : []),
+    `${UNIT_W}px`, `${DATE_W}px`,
+   ].join(' ');
+   const colhdrH = cols.some((d, i) => hdrW(d.h) > colPx[i]) ? 30 : 22;
+   const rowH = it => (cols.some((d, i) => tw(txt(d, it), fnt(d)) > colPx[i] + 1) ? ROW_H2L : ROW_H);
+   return { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale };
+  };
+
+  // Split each product into equal-size cards; a product with more rows continues: "(1/2)", "(2/2)"
   const chunks = [];
   allGroups.forEach(([group, gItems]) => {
+   const L = layoutFor(gItems);
+   const bodyH = (cellH - HEAD_H - 2) / L.scale - L.colhdrH;   // in the card's (possibly scaled) units
    const parts = []; let cur = [], used = 0;
    gItems.forEach(it => {
-    const h = rowHOf(it);
+    const h = L.rowH(it);
     if (cur.length && used + h > bodyH) { parts.push(cur); cur = []; used = 0; }
     cur.push(it); used += h;
    });
    if (cur.length) parts.push(cur);
-   parts.forEach((items, i) => chunks.push({ key: `${group}#${i}`, group, items, total: gItems.length, part: parts.length > 1 ? `${i + 1}/${parts.length}` : '' }));
+   parts.forEach((items, i) => chunks.push({ key: `${group}#${i}`, group, items, total: gItems.length, part: parts.length > 1 ? `${i + 1}/${parts.length}` : '', L }));
   });
   const perPage1 = GRID_COLS * GRID_ROWS;
   const pages = [];
@@ -499,7 +514,7 @@ export default function AdminPricing() {
        </div>
       ) : <>
        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0,1fr))`, gridTemplateRows: `repeat(${GRID_ROWS}, ${cellH}px)`, gap: GAP, height: availH, overflow: 'hidden' }}>
-        {pageCards1.map(({ key, group, items: gItems, total, part }) => (
+        {pageCards1.map(({ key, group, items: gItems, total, part, L }) => (
            <div key={key} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', height: cellH, minWidth: 0 }}>
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -507,14 +522,13 @@ export default function AdminPricing() {
              <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{total}</span>
             </div>
             {(() => {
-             const cols = DEF1, hasCost = true, hasTarget = true;
-             const grid = CARD_GRID;
+             const { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale } = L;
              const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-             const wrapS = { minWidth: 0, overflow: 'hidden', whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' };
+             const wrapS = { minWidth: 0, overflow: 'hidden', whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'normal', overflowWrap: 'normal' };
              return (
-              <>
+              <div style={{ zoom: scale }}>
                {/* Column headers (only the columns this card uses) */}
-               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: COLHDR_H1, padding: '0 10px', background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
+               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: '0 10px', background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
                 {cols.map(d => <span key={d.h} style={wrapS}>{d.h}</span>)}
                 {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST</span>}
                 <span style={{ ...cellS, textAlign: 'right' }}>MARKET ₹</span>
@@ -524,7 +538,7 @@ export default function AdminPricing() {
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
-                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowHOf(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
                  ))}
@@ -535,7 +549,7 @@ export default function AdminPricing() {
                  <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right', textTransform: 'none' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
                 </div>
                ))}
-              </>
+              </div>
              );
             })()}
            </div>
