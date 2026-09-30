@@ -120,7 +120,15 @@ export default function AdminPricing() {
  const [showProductDD, setShowProductDD] = useState(false);
  const [productSearch, setProductSearch] = useState('');
  const [tvMode, setTvMode] = useState(false);   // TV 1: Price Board
- const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Market Board (content to be defined)
+ const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Price Board 2 (airport style)
+ const TV2_PAGE_SEC = 15;
+ const [tv2Page, setTv2Page] = useState(0);
+ const [tv2Countdown, setTv2Countdown] = useState(TV2_PAGE_SEC);
+ useEffect(() => {
+  if (!tv2Mode) { setTv2Page(0); setTv2Countdown(TV2_PAGE_SEC); return; }
+  const t = setInterval(() => setTv2Countdown(c => { if (c <= 1) { setTv2Page(p => p + 1); return TV2_PAGE_SEC; } return c - 1; }), 1000);
+  return () => clearInterval(t);
+ }, [tv2Mode]);
  const [tvPage, setTvPage] = useState(0);
  const TV_PAGE_SEC = 20;        // seconds before auto-advance
  const [tvCountdown, setTvCountdown] = useState(TV_PAGE_SEC);
@@ -214,28 +222,89 @@ export default function AdminPricing() {
 
  const pricedCount = displayItems.filter(i => i.price !== null).length;
 
- /* ══ TV 2: MARKET BOARD (placeholder — content to be defined) ══ */
+ /* ══ TV 2: PRICE BOARD 2 — airport departures style ══ */
  if (tv2Mode) {
+  const rows2 = latestItems
+   .filter(i => i.price !== null)
+   .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
+    (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
+  const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, ROW_H2 = 32, PANEL_GAP = 12;
+  const PANELS = window.innerWidth >= 1500 ? 2 : 1;
+  const perPanel = Math.max(1, Math.floor((window.innerHeight - HDR_H - FOOT_H - COLHDR_H - 20) / ROW_H2));
+  const perPage = perPanel * PANELS;
+  const pages2 = Math.max(1, Math.ceil(rows2.length / perPage));
+  const cur2 = tv2Page % pages2;
+  const pageRows = rows2.slice(cur2 * perPage, cur2 * perPage + perPage);
+  const panels = Array.from({ length: PANELS }, (_, i) => pageRows.slice(i * perPanel, (i + 1) * perPanel));
+  const COLS = '2.2fr 1.4fr 1fr 1fr 0.9fr 1fr 1.1fr 0.6fr 0.9fr 0.8fr';
+  const HEAD = ['PRODUCT', 'MAKE', 'COO', 'GRADE', 'PURITY', 'PACKING', 'PRICE ₹', 'UNIT', 'EX', 'UPDATED'];
+  const mono = "'Consolas','Roboto Mono','Courier New',monospace";
+  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: '0 8px' };
+
   return (
-   <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #0e5a78 0%, #0a2a45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-    <div style={{ height: 70, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0e7490 60%, #38bdf8)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
+   <div style={{ position: 'fixed', inset: 0, background: '#04122b', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
+    {/* Header */}
+    <div style={{ height: HDR_H, flexShrink: 0, background: 'linear-gradient(180deg, #0b3f8c, #082c63)', borderBottom: '3px solid #fcd34d', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
+      <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
        <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
       </div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4 }}>
-       Market Board <span style={{ fontSize: 13, fontWeight: 700, color: '#bae6fd', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
+      <div>
+       <div style={{ fontSize: 24, fontWeight: 900, color: '#fff', letterSpacing: 2, fontFamily: mono }}>PRICE BOARD</div>
+       <div style={{ fontSize: 12, color: '#fcd34d', fontWeight: 700, letterSpacing: 2 }}>LOK CHEMICALS · LIVE RATES</div>
       </div>
      </div>
-     <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+     <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+      <div style={{ textAlign: 'center', fontFamily: mono }}>
+       <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>PAGE</div>
+       <div style={{ fontSize: 18, color: '#fcd34d', fontWeight: 900 }}>{cur2 + 1}/{pages2}</div>
+      </div>
+      <div style={{ textAlign: 'center', fontFamily: mono }}>
+       <div style={{ fontSize: 11, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>LIVE</div>
+       <div style={{ fontSize: 18, color: '#4ade80', fontWeight: 900 }}>{rows2.length}</div>
+      </div>
       <LiveClock />
       <button onClick={() => setTv2Mode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
      </div>
     </div>
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#bae6fd' }}>
-     <div style={{ fontSize: 48 }}>📊</div>
-     <div style={{ fontSize: 22, fontWeight: 700, color: '#e0f2fe' }}>Market Board</div>
-     <div style={{ fontSize: 14 }}>Coming soon</div>
+
+    {/* Board panels */}
+    <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '10px 10px', minHeight: 0 }}>
+     {rows2.length === 0 ? (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fcd34d', fontFamily: mono, fontSize: 24, fontWeight: 800, letterSpacing: 2 }}>NO PRICES AVAILABLE</div>
+     ) : panels.map((pRows, pi) => (
+      <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
+       {/* Column headers */}
+       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: 12, letterSpacing: 1, fontFamily: mono }}>
+        {HEAD.map((h, i) => <div key={h} style={{ ...cell, textAlign: i >= 6 ? 'center' : 'left' }}>{h}</div>)}
+       </div>
+       {/* Rows */}
+       {pRows.map((it, ri) => {
+        const isToday = it.date === today;
+        return (
+         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: 14, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
+          <div style={{ ...cell, color: '#fff', fontWeight: 900 }}>{it.product.group}</div>
+          <div style={{ ...cell, color: '#fde68a' }}>{it.product.make || '—'}</div>
+          <div style={cell}>{it.product.coo || '—'}</div>
+          <div style={{ ...cell, color: '#c4b5fd' }}>{it.product.grade || '—'}</div>
+          <div style={{ ...cell, color: '#7dd3fc' }}>{it.product.purity || '—'}</div>
+          <div style={{ ...cell, color: '#a7f3d0' }}>{it.product.itemPackage || '—'}</div>
+          <div style={{ ...cell, textAlign: 'right', color: '#4ade80', fontWeight: 900, fontSize: 16 }}>{it.price.toLocaleString()}</div>
+          <div style={{ ...cell, textAlign: 'center', color: '#93c5fd' }}>{it.product.unit}</div>
+          <div style={{ ...cell, textAlign: 'center' }}>{it.ex || '—'}</div>
+          <div style={{ ...cell, textAlign: 'center', color: isToday ? '#4ade80' : '#fbbf24' }}>{fmtDate(it.updatedAt || it.date) || '—'}</div>
+         </div>
+        );
+       })}
+      </div>
+     ))}
+    </div>
+
+    {/* Footer */}
+    <div style={{ height: FOOT_H, flexShrink: 0, background: '#082c63', borderTop: '2px solid #1e4f9a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', fontFamily: mono, fontSize: 13, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>
+     <span>{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</span>
+     <span><span style={{ color: '#4ade80' }}>■</span> UPDATED TODAY &nbsp;&nbsp; <span style={{ color: '#fbbf24' }}>■</span> EARLIER RATE</span>
+     <span>{pages2 > 1 ? `NEXT PAGE IN ${tv2Countdown}s` : `REFRESH ${countdown}s`}</span>
     </div>
    </div>
   );
@@ -463,11 +532,11 @@ export default function AdminPricing() {
     {/* TV buttons */}
     <button onClick={() => setTvMode(true)} title="Full-screen live price board"
      style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0b3f8c,#1d6fd1)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(11,63,140,0.25)', whiteSpace: 'nowrap' }}>
-     📺 Price Board
+     📺 Price Board 1
     </button>
-    <button onClick={() => setTv2Mode(true)} title="Second full-screen TV board"
+    <button onClick={() => setTv2Mode(true)} title="Airport-style full-screen price board"
      style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0e7490,#38bdf8)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(14,116,144,0.25)', whiteSpace: 'nowrap' }}>
-     📊 Market Board
+     ✈️ Price Board 2
     </button>
    </div>
    </div>{/* /sticky-page-header */}
