@@ -383,9 +383,9 @@ export default function AdminPricing() {
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
    { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
   ];
-  // Fixed grid: 3 columns × 3 rows of equal-size cards (9 per page).
+  // Fixed grid: 4 columns × 3 rows of equal-size cards (12 per page).
   // Each card shows only the columns it has data for, sized to its own content.
-  const GRID_COLS = 3, GRID_ROWS = 3;
+  const GRID_COLS = 4, GRID_ROWS = 3;
   const mctx = document.createElement('canvas').getContext('2d');
   const tw = (t, font, ls = 0) => { mctx.font = font; const str = String(t ?? ''); return Math.ceil(mctx.measureText(str).width + ls * str.length); };
   const F_ROW = "700 12px 'Segoe UI', sans-serif", F_MAKE = "800 13.5px 'Segoe UI', sans-serif", F_HDR = "800 9.5px 'Segoe UI', sans-serif";
