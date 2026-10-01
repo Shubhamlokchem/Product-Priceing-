@@ -191,7 +191,7 @@ export default function LoginPage() {
   if (introDone) { (form.email ? null : emailRef.current)?.focus(); return; }
   const t = setTimeout(() => setIntroDone(true), 3700);
   return () => clearTimeout(t);
- }, [introDone]); // eslint-disable-line react-hooks/exhaustive-deps
+ }, [introDone]);
 
  const skipIntro = () => { setSkip(true); setIntroDone(true); };
  const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
