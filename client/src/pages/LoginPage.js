@@ -135,42 +135,128 @@ const Person = () => (
  </svg>
 );
 
+/* ── Fracture geometry: shards (in % of the card box) radiating from an impact point ── */
+const makeShards = (cx, cy) => {
+ const N = 9, inner = 24, outer = 160;
+ let seed = 7; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+ const angs = Array.from({ length: N }, (_, i) => ((i + 0.25 + rnd() * 0.5) / N) * Math.PI * 2);
+ const pt = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+ const midR = angs.map(() => inner * (0.75 + rnd() * 0.5));
+ const shards = [];
+ angs.forEach((a, i) => {
+  const b = angs[(i + 1) % N];
+  const p1 = pt(a, midR[i]), p2 = pt(b, midR[(i + 1) % N]);
+  const o1 = pt(a, outer), o2 = pt(b, outer), om = pt((a + b + (b < a ? Math.PI * 2 : 0)) / 2, outer);
+  shards.push([[cx, cy], p1, p2]);                 // inner triangle
+  shards.push([p1, o1, om, o2, p2]);               // outer piece
+ });
+ return shards.map((poly, i) => {
+  const c = poly.reduce((acc, [x, y]) => [acc[0] + x / poly.length, acc[1] + y / poly.length], [0, 0]);
+  const dx = c[0] - cx, dy = c[1] - cy, len = Math.hypot(dx, dy) || 1;
+  const dist = 260 + rnd() * 320;
+  return {
+   clip: `polygon(${poly.map(([x, y]) => `${x.toFixed(1)}% ${y.toFixed(1)}%`).join(', ')})`,
+   origin: `${c[0].toFixed(1)}% ${c[1].toFixed(1)}%`,
+   tx: `${((dx / len) * dist).toFixed(0)}px`, ty: `${((dy / len) * dist).toFixed(0)}px`,
+   rot: `${((rnd() - 0.5) * 220).toFixed(0)}deg`,
+   dl: `${(0.12 + (i % 2) * 0.05 + rnd() * 0.06).toFixed(2)}s`,
+  };
+ });
+};
+
 export default function LoginPage() {
- const { login } = useAuth();
+ const { login, commitUser } = useAuth();
  const navigate = useNavigate();
- const [form, setForm] = useState({ email: '', password: '' });
+ const [form, setForm] = useState(() => {
+  let email = '';
+  try { email = localStorage.getItem('lgRememberEmail') || ''; } catch { /* ignore */ }
+  return { email, password: '' };
+ });
+ const [remember, setRemember] = useState(() => { try { return !!localStorage.getItem('lgRememberEmail'); } catch { return false; } });
  const [error, setError] = useState('');
+ const [info, setInfo] = useState('');
  const [loading, setLoading] = useState(false);
  const [showPwd, setShowPwd] = useState(false);
+ const [shatter, setShatter] = useState(null); // { rect, shards, impact }
  const emailRef = useRef(null);
+ const cardRef = useRef(null);
 
- // Play the intro every time the login page opens (incl. after logout); off for reduced-motion users
+ // Intro plays every time the login page opens (incl. after logout); off for reduced-motion users
  const [skip, setSkip] = useState(() =>
   typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches
  );
  const [introDone, setIntroDone] = useState(skip);
 
  useEffect(() => {
-  if (introDone) { emailRef.current?.focus(); return; }
+  if (introDone) { (form.email ? null : emailRef.current)?.focus(); return; }
   const t = setTimeout(() => setIntroDone(true), 3700);
   return () => clearTimeout(t);
- }, [introDone]);
+ }, [introDone]); // eslint-disable-line react-hooks/exhaustive-deps
 
  const skipIntro = () => { setSkip(true); setIntroDone(true); };
-
  const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
 
  const submit = async e => {
   e.preventDefault();
-  setError('');
+  setError(''); setInfo('');
   setLoading(true);
   try {
-   const user = await login(form.email, form.password);
-   navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+   const user = await login(form.email, form.password, true);
+   try { remember ? localStorage.setItem('lgRememberEmail', form.email) : localStorage.removeItem('lgRememberEmail'); } catch { /* ignore */ }
+   const go = () => { commitUser(user); navigate(user.role === 'admin' ? '/admin' : '/dashboard'); };
+   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+   const rect = cardRef.current?.getBoundingClientRect();
+   if (reduced || !rect) { go(); return; }
+   // impact point = the LOGIN button
+   const btn = cardRef.current.querySelector('.lg-btn')?.getBoundingClientRect();
+   const cx = btn ? ((btn.left + btn.width / 2 - rect.left) / rect.width) * 100 : 50;
+   const cy = btn ? ((btn.top + btn.height / 2 - rect.top) / rect.height) * 100 : 60;
+   setShatter({ rect, shards: makeShards(cx, cy), impact: [cx, cy] });
+   setTimeout(go, 1150);
   } catch (err) {
    setError(err.response?.data?.message || 'Login failed. Check your email and password.');
-  } finally { setLoading(false); }
+   setLoading(false);
+  }
  };
+
+ // The card's face (also re-used, frozen, inside every flying shard)
+ const face = (live) => (
+  <>
+   <div className="lg-head">
+    <div className="lg-head-logo"><img src="/logo.png" alt="Lok Chemicals" /></div>
+    <div className="lg-title">LOGIN</div>
+    <div className="lg-sub">Lok Chemicals · Pricing CRM</div>
+   </div>
+   {live && error && <div className="lg-msg err">{error}</div>}
+   {live && info && <div className="lg-msg info">{info}</div>}
+   <div className="lg-field">
+    <input ref={live ? emailRef : undefined} name="email" type="email" value={form.email} onChange={live ? handle : undefined} readOnly={!live} tabIndex={live ? 0 : -1}
+     placeholder="Email address" aria-label="Email address" required={live} autoComplete="email" />
+    <span className="lg-ico" aria-hidden="true">
+     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="8" r="4.2" /><path d="M3.5 21c0-4.4 3.8-7.5 8.5-7.5s8.5 3.1 8.5 7.5z" /></svg>
+    </span>
+   </div>
+   <div className="lg-field">
+    <input name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={live ? handle : undefined} readOnly={!live} tabIndex={live ? 0 : -1}
+     placeholder="Password" aria-label="Password" required={live} autoComplete="current-password" />
+    <button type="button" className="lg-ico" onClick={live ? () => setShowPwd(v => !v) : undefined} tabIndex={live ? 0 : -1}
+     title={showPwd ? 'Hide password' : 'Show password'} aria-label={showPwd ? 'Hide password' : 'Show password'}>
+     {showPwd ? (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
+     ) : (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="10.5" width="14" height="10" rx="2" /><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="currentColor" strokeWidth="2.2" /></svg>
+     )}
+    </button>
+   </div>
+   <button className="lg-btn" disabled={live && loading} tabIndex={live ? 0 : -1}>{live && loading && !shatter ? 'SIGNING IN…' : 'LOGIN'}</button>
+   <div className="lg-row">
+    <label><input type="checkbox" checked={remember} onChange={live ? e => setRemember(e.target.checked) : undefined} readOnly={!live} tabIndex={live ? 0 : -1} /> Remember me</label>
+    <button type="button" tabIndex={live ? 0 : -1} onClick={live ? () => { setError(''); setInfo('Please contact your admin to reset your password.'); } : undefined}>Forgot password?</button>
+   </div>
+  </>
+ );
 
  return (
   <div className={`lg-bg ${skip ? 'lg-skip' : ''}`}>
@@ -203,45 +289,30 @@ export default function LoginPage() {
      <span key={i} className="lg-spark" style={{ '--x': `${x}px`, '--y': `${y}px`, animationDelay: `${2.8 + i * 0.03}s` }} />
     ))}
 
-    <div className="lg-card">
-     <div className="auth-logo">
-      <img src="/logo.png" alt="Lok Chemicals" className="auth-logo-img" style={{ maxHeight: 58 }} />
-      <h1>Lok Chemicals</h1>
-      <p>Pricing CRM Dashboard</p>
-     </div>
-     <form onSubmit={submit}>
-      <div className="form-group">
-       <label>Email Address</label>
-       <input ref={emailRef} name="email" type="email" value={form.email} onChange={handle}
-        placeholder="Enter your email" required autoComplete="email" />
-      </div>
-      <div className="form-group">
-       <label>Password</label>
-       <div style={{ position: 'relative' }}>
-        <input name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={handle}
-         placeholder="Enter your password" required autoComplete="current-password"
-         style={{ width: '100%', paddingRight: 42, boxSizing: 'border-box' }} />
-        <button type="button" onClick={() => setShowPwd(v => !v)}
-         title={showPwd ? 'Hide password' : 'Show password'} aria-label={showPwd ? 'Hide password' : 'Show password'}
-         style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', padding: 4, cursor: 'pointer', color: '#6b7280', display: 'flex', alignItems: 'center' }}>
-         {showPwd ? (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>
-          </svg>
-         ) : (
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-          </svg>
-         )}
-        </button>
-       </div>
-      </div>
-      {error && <div className="auth-error">{error}</div>}
-      <button className="auth-btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
-     </form>
-     <p style={{ textAlign: 'center', marginTop: 12, fontSize: 12, color: '#9ca3af' }}>Contact your admin to create an account.</p>
-    </div>
+    <form ref={cardRef} className="lg-card" onSubmit={submit} style={shatter ? { visibility: 'hidden' } : undefined}>
+     {face(true)}
+    </form>
    </div>
+
+   {/* ── Fracture: the card shatters into glass pieces after a successful login ── */}
+   {shatter && (
+    <>
+     <div className="lg-flash" style={{ '--fx': `${shatter.rect.left + (shatter.rect.width * shatter.impact[0]) / 100}px`, '--fy': `${shatter.rect.top + (shatter.rect.height * shatter.impact[1]) / 100}px` }} />
+     <div className="lg-shatter" style={{ left: shatter.rect.left, top: shatter.rect.top, width: shatter.rect.width, height: shatter.rect.height }}>
+      {shatter.shards.map((sh, i) => (
+       <div key={i} className="lg-shard" style={{ clipPath: sh.clip, WebkitClipPath: sh.clip, transformOrigin: sh.origin, '--tx': sh.tx, '--ty': sh.ty, '--rot': sh.rot, '--dl': sh.dl }}>
+        <div className="lg-card">{face(false)}</div>
+       </div>
+      ))}
+      <svg className="lg-cracks" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+       {shatter.shards.filter((_, i) => i % 2 === 1).map((sh, i) => {
+        const pts = sh.clip.replace(/polygon\(|\)|%/g, '').split(',').map(p => p.trim().split(' ').map(Number));
+        return <polyline key={i} points={`${shatter.impact[0]},${shatter.impact[1]} ${pts[0][0]},${pts[0][1]} ${pts[1][0]},${pts[1][1]}`} fill="none" stroke="#fff" strokeWidth=".6" vectorEffect="non-scaling-stroke" />;
+       })}
+      </svg>
+     </div>
+    </>
+   )}
 
    {!introDone && <button className="lg-skip-btn" onClick={skipIntro}>Skip ⏭</button>}
    <div className="lg-tagline">LOK CHEMICALS · CHEMICALS · SOLVENTS · POLYMERS · SINCE 1995</div>
