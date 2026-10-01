@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import '../Dashboard.css';
 
@@ -234,13 +234,14 @@ export default function AdminPricing() {
  // TV ribbon announcement (saved on the server, shared by every screen)
  const [ribbonText, setRibbonText] = useState('');
  const [showRibbonEd, setShowRibbonEd] = useState(false);
+ const [showMenu, setShowMenu] = useState(false);
  const [ribbonDraft, setRibbonDraft] = useState('');
  const [ribbonSaving, setRibbonSaving] = useState(false);
  const ribbonRef = useRef(null);
  const loadRibbon = useCallback(() => { api.get('/settings/ribbon').then(r => setRibbonText(r.data?.text || '')).catch(() => {}); }, []);
  useEffect(() => { loadRibbon(); const t = setInterval(loadRibbon, 30000); return () => clearInterval(t); }, [loadRibbon]);
  useEffect(() => {
-  const h = e => { if (ribbonRef.current && !ribbonRef.current.contains(e.target)) setShowRibbonEd(false); };
+  const h = e => { if (ribbonRef.current && !ribbonRef.current.contains(e.target)) { setShowRibbonEd(false); setShowMenu(false); } };
   document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
  }, []);
  const saveRibbon = async (text) => {
@@ -659,20 +660,35 @@ export default function AdminPricing() {
     </div>
 
 
-    {/* Export */}
-    <button onClick={exportPrices} style={{ padding: '6px 12px', background: '#fff', color: '#16a34a', border: '1.5px solid #bbf7d0', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ Export CSV</button>
-
-    {/* Refresh */}
-    <button onClick={loadData} style={{ padding: '6px 12px', background: '#f0f5ff', color: '#1a3a6b', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>↻ Refresh</button>
-
-    {/* Ribbon announcement editor */}
+    {/* Actions menu: Export, Refresh, Ribbon, Price Board 1 & 2 */}
     <div style={{ position: 'relative', flexShrink: 0 }} ref={ribbonRef}>
-     <button onClick={() => { setRibbonDraft(ribbonText); setShowRibbonEd(v => !v); }}
-      title="TV ribbon announcement"
-      style={{ position: 'relative', padding: '6px 10px', background: ribbonText ? '#fef3c7' : '#fff', color: '#92400e', border: `1.5px solid ${ribbonText ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 13, cursor: 'pointer', lineHeight: 1 }}>
-      📢
+     <button onClick={() => { setShowMenu(v => !v); setShowRibbonEd(false); }} title="Actions" aria-label="Actions"
+      style={{ position: 'relative', width: 34, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', background: showMenu || showRibbonEd ? 'linear-gradient(135deg,#1d58a8,#0e9f7a)' : '#fff', color: showMenu || showRibbonEd ? '#fff' : '#1d58a8', border: `1.5px solid ${showMenu || showRibbonEd ? 'transparent' : '#c7d7fa'}`, borderRadius: 8, cursor: 'pointer', padding: 0, boxShadow: '0 1px 4px rgba(15,40,80,0.08)' }}>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg>
       {ribbonText && <span style={{ position: 'absolute', top: -4, right: -4, width: 9, height: 9, borderRadius: 99, background: '#f59e0b', border: '2px solid #fff' }} />}
      </button>
+     {showMenu && !showRibbonEd && (
+      <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300, width: 210, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 14px 36px rgba(15,40,80,0.18)', padding: 6 }}>
+       {[
+        { icon: '↓', label: 'Export CSV', color: '#16a34a', bg: '#f0fdf4', act: () => { setShowMenu(false); exportPrices(); } },
+        { icon: '↻', label: 'Refresh', color: '#1d58a8', bg: '#eff6ff', act: () => { setShowMenu(false); loadData(); } },
+        { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
+        { icon: '📺', label: 'Price Board 1', color: '#0b3f8c', bg: '#e0ecff', sep: true, act: () => { setShowMenu(false); setTvMode(true); } },
+        { icon: '✈️', label: 'Price Board 2', color: '#0e7490', bg: '#e0f7fd', act: () => { setShowMenu(false); setTv2Mode(true); } },
+       ].map(it => (
+        <Fragment key={it.label}>
+         {it.sep && <div style={{ height: 1, background: '#eef2f7', margin: '4px 6px' }} />}
+         <button onClick={it.act}
+          onMouseEnter={e => { e.currentTarget.style.background = '#f5f8fd'; }} onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '7px 8px', background: 'transparent', border: 'none', borderRadius: 8, cursor: 'pointer', textAlign: 'left', fontSize: 12.5, fontWeight: 600, color: '#1f2937' }}>
+          <span style={{ width: 26, height: 26, borderRadius: 7, background: it.bg, color: it.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, flexShrink: 0 }}>{it.icon}</span>
+          <span style={{ flex: 1 }}>{it.label}</span>
+          {it.dot && <span title="Announcement is live" style={{ width: 7, height: 7, borderRadius: 99, background: '#f59e0b' }} />}
+         </button>
+        </Fragment>
+       ))}
+      </div>
+     )}
      {showRibbonEd && (
       <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300, width: 340, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 14px 36px rgba(15,40,80,0.18)', padding: 12 }}>
        <div style={{ fontSize: 12, fontWeight: 800, color: '#1a3a6b', marginBottom: 2 }}>📢 TV ribbon announcement</div>
@@ -695,16 +711,6 @@ export default function AdminPricing() {
       </div>
      )}
     </div>
-
-    {/* TV buttons */}
-    <button onClick={() => setTvMode(true)} title="Full-screen live price board"
-     style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0b3f8c,#1d6fd1)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(11,63,140,0.25)', whiteSpace: 'nowrap' }}>
-     📺 Price Board 1
-    </button>
-    <button onClick={() => setTv2Mode(true)} title="Airport-style full-screen price board"
-     style={{ padding: '6px 12px', background: 'linear-gradient(135deg,#0e7490,#38bdf8)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(14,116,144,0.25)', whiteSpace: 'nowrap' }}>
-     ✈️ Price Board 2
-    </button>
    </div>
    </div>{/* /sticky-page-header */}
 
