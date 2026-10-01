@@ -109,9 +109,18 @@ function PriceTicker({ items, notice = '' }) {
   .map(i => `★ ${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
  const parts = [...notes, ...starred];
  const text = parts.length ? parts.join('   •   ') : RIBBON_MESSAGES.join('   ✦   ');
+ // Constant scroll speed (pixels per second) so short and long ribbons move equally fast
+ const TICKER_PX_PER_SEC = 150;
+ const runRef = useRef(null);
+ const [dur, setDur] = useState(20);
+ useEffect(() => {
+  const measure = () => { const el = runRef.current; if (el) setDur(Math.max(6, (el.offsetWidth / 2) / TICKER_PX_PER_SEC)); };
+  measure(); window.addEventListener('resize', measure);
+  return () => window.removeEventListener('resize', measure);
+ }, [text]);
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
-   <div style={{ display: 'inline-block', animation: `ticker ${Math.max(20, Math.round(text.length * 0.085))}s linear infinite`, paddingLeft: '100%' }}>
+   <div ref={runRef} style={{ display: 'inline-block', animation: `ticker ${dur.toFixed(1)}s linear infinite`, paddingLeft: '100%' }}>
     {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
    </div>
    <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
