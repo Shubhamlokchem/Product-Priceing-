@@ -91,13 +91,17 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
 }
 
 /* ── Price ticker ── */
+// Internal office display (team-facing). Shown only when no product is starred ⭐ in Manage Products.
 const RIBBON_MESSAGES = [
- 'Welcome to Lok Chemicals — trusted importer & distributor since 1995',
- '250+ chemicals, solvents & polymers for paints, pharma, construction, textiles & dyes',
- 'Prices are updated daily — ask our sales team for the best rate today',
- 'PESO-certified warehouses across Navi Mumbai, Uran, Bhiwandi, Mundra, Chennai, Kolkata & Hyderabad',
- 'Quality you can trust · Delivery you can count on',
-];
+ 'Good day, Team Lok Chemicals!',
+ 'Update today\'s Cost, Market & Target prices in Manage Products before quoting',
+ 'Check Cost vs Target before every quote — protect our margin',
+ 'Market prices move fast — confirm the latest rate with Purchase before committing',
+ 'Star ⭐ priority products in Manage Products to show them on this ribbon',
+ 'Reply to open customer queries on time — every quick reply builds trust',
+ 'Safety first — follow PESO guidelines at every warehouse',
+ 'One team · one goal — let\'s make today count!',
+]
 function PriceTicker({ items }) {
  // Only products marked ⭐ priority in Manage Products; if none, show company / market messages
  const starred = items.filter(i => i.price !== null && i.product?.starred);
