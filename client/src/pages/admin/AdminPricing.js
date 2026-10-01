@@ -14,52 +14,70 @@ const fmtDate = (d) => {
 function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, progressPct, onPrev, onNext, onExit }) {
  const [now, setNow] = useState(new Date());
  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+ // full-screen toggle (browser Fullscreen API)
+ const [isFs, setIsFs] = useState(!!document.fullscreenElement);
+ useEffect(() => { const h = () => setIsFs(!!document.fullscreenElement); document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h); }, []);
+ const toggleFs = () => {
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+ };
  const glass = { background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 99 };
  const sep = <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.22)' }} />;
- const navB = { width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 };
+ const navB = { width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 };
  return (
   <div style={{ height, flexShrink: 0, position: 'relative', background: 'linear-gradient(90deg, #08234f 0%, #0b3f8c 50%, #0f5fae 100%)', boxShadow: '0 4px 16px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.08)' }}>
    <div style={{ height: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px' }}>
     {/* brand */}
-    <div style={{ width: 38, height: 38, flexShrink: 0, background: '#fff', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.3)' }}>
-     <img src="/logo.png" alt="Lok Chemicals" style={{ width: 31, height: 'auto' }} />
+    <div style={{ width: 36, height: 36, flexShrink: 0, background: '#fff', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.3)' }}>
+     <img src="/logo.png" alt="Lok Chemicals" style={{ width: 29, height: 'auto' }} />
     </div>
-    <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-     <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>Live Price Index</div>
-     <div style={{ fontSize: 9.5, fontWeight: 800, color: '#7dd3fc', letterSpacing: 2.2 }}>LOK CHEMICALS</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, whiteSpace: 'nowrap' }}>
+     <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: 0.4 }}>Lok Chemicals</span>
+     <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.3)' }} />
+     <span style={{ fontSize: 12, fontWeight: 800, color: '#bae6fd', letterSpacing: 1.6, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99, background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(125,211,252,0.35)' }}>Live Price Index</span>
     </div>
 
     <div style={{ flex: 1 }} />
 
     {/* everything in one rounded glass box: live · refresh · page · clock · exit */}
-    <div style={{ ...glass, borderRadius: 16, display: 'flex', alignItems: 'center', gap: 12, padding: '4px 6px 4px 14px', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
-     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900, fontSize: 12 }}>
+    <div style={{ ...glass, borderRadius: 14, display: 'flex', alignItems: 'center', gap: 10, padding: '3px 5px 3px 12px', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900, fontSize: 11.5 }}>
       <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'tvpulse 1.4s infinite' }} />{live} LIVE
      </span>
      {sep}
-     <span style={{ fontSize: 12, fontWeight: 700, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontVariantNumeric: 'tabular-nums' }}>↻ {countdown}s</span>
+     <span style={{ fontSize: 11.5, fontWeight: 700, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontVariantNumeric: 'tabular-nums' }}>↻ {countdown}s</span>
      {pages > 1 && <>
       {sep}
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
        <button onClick={onPrev} style={navB} aria-label="Previous page">‹</button>
-       <span style={{ fontSize: 12.5, color: '#fff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{page + 1} / {pages}</span>
+       <span style={{ fontSize: 12, color: '#fff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{page + 1} / {pages}</span>
        <button onClick={onNext} style={navB} aria-label="Next page">›</button>
        <span style={{ fontSize: 11, color: '#fcd34d', fontWeight: 900, minWidth: 22, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{pageCountdown}s</span>
       </span>
      </>}
      {sep}
-     <span style={{ textAlign: 'right', lineHeight: 1.05 }}>
-      <span style={{ display: 'block', fontSize: 19, fontWeight: 800, color: '#fff', letterSpacing: 0.8, fontVariantNumeric: 'tabular-nums' }}>
-       {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-      </span>
-      <span style={{ display: 'block', fontSize: 9.5, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
+     <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 8, fontVariantNumeric: 'tabular-nums' }}>
+      <span style={{ fontSize: 11.5, fontWeight: 700, color: 'rgba(255,255,255,0.75)' }}>
        {`${now.toLocaleDateString('en-GB', { weekday: 'short' })}, ${String(now.getDate()).padStart(2, '0')} ${now.toLocaleDateString('en-GB', { month: 'short' })} ${now.getFullYear()}`}
       </span>
+      <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: 0.5 }}>
+       {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </span>
      </span>
-     <button onClick={onExit} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, padding: 0, borderRadius: 11, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer' }}
+     <button onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.(); onExit(); }} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, padding: 0, borderRadius: 9, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer' }}
       onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+     </button>
+     <button onClick={toggleFs} title={isFs ? 'Exit full screen' : 'Full screen'} aria-label={isFs ? 'Exit full screen' : 'Full screen'}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, padding: 0, borderRadius: 9, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer' }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(56,189,248,0.45)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}>
+      {isFs ? (
+       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 14 10 14 10 20" /><polyline points="20 10 14 10 14 4" /><line x1="14" y1="10" x2="21" y2="3" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+      ) : (
+       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></svg>
+      )}
      </button>
     </div>
    </div>
@@ -73,10 +91,19 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
 }
 
 /* ── Price ticker ── */
+const RIBBON_MESSAGES = [
+ 'Welcome to Lok Chemicals — trusted importer & distributor since 1995',
+ '250+ chemicals, solvents & polymers for paints, pharma, construction, textiles & dyes',
+ 'Prices are updated daily — ask our sales team for the best rate today',
+ 'PESO-certified warehouses across Navi Mumbai, Uran, Bhiwandi, Mundra, Chennai, Kolkata & Hyderabad',
+ 'Quality you can trust · Delivery you can count on',
+];
 function PriceTicker({ items }) {
- const priced = items.filter(i => i.price !== null);
- if (!priced.length) return null;
- const text = priced.map(i => `${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`).join('   •   ');
+ // Only products marked ⭐ priority in Manage Products; if none, show company / market messages
+ const starred = items.filter(i => i.price !== null && i.product?.starred);
+ const text = starred.length
+  ? starred.map(i => `★ ${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`).join('   •   ')
+  : RIBBON_MESSAGES.join('   ✦   ');
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
    <div style={{ display: 'inline-block', animation: `ticker ${Math.max(25, Math.round(text.length * 0.11))}s linear infinite`, paddingLeft: '100%' }}>

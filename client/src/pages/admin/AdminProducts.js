@@ -197,6 +197,14 @@ export default function AdminProducts() {
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Add failed' }); }
  };
 
+ // Priority star (shown on the TV live ribbon) — updates instantly, saved on the server
+ const toggleStar = async (p) => {
+  const val = !p.starred;
+  setProducts(ps => ps.map(x => (x._id === p._id ? { ...x, starred: val } : x)));
+  try { await api.put(`/products/${p._id}`, { starred: val }); }
+  catch { setProducts(ps => ps.map(x => (x._id === p._id ? { ...x, starred: !val } : x))); setMsg({ type: 'error', text: 'Could not update priority' }); }
+ };
+
  // Delete product
  const deleteProduct = async (id) => {
  if (!window.confirm('Remove this product?')) return;
@@ -972,6 +980,11 @@ export default function AdminProducts() {
              </div>
             ) : (
              <div style={{ display: 'flex', gap: 3, flexWrap: 'nowrap' }}>
+              <button title={p.starred ? 'Priority — shown on the TV live ribbon (click to remove)' : 'Mark as priority (show on TV live ribbon)'}
+               onClick={() => toggleStar(p)}
+               style={{ padding: '4px 6px', display: 'flex', alignItems: 'center', background: p.starred ? '#fef3c7' : '#fff', border: `1.5px solid ${p.starred ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 6, cursor: 'pointer' }}>
+               <svg width="15" height="15" viewBox="0 0 24 24" fill={p.starred ? '#f59e0b' : 'none'} stroke={p.starred ? '#f59e0b' : '#9ca3af'} strokeWidth="2" strokeLinejoin="round"><polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.2 21 12 17.3 5.8 21 7.2 14 2 9.3 8.9 8.6 12 2" /></svg>
+              </button>
               <button title="Save price" className="btn btn-sm btn-accent" style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => saveRowPrice(p._id)}><IconCheck /></button>
               <button title="Edit product details" className="btn btn-sm btn-primary" style={{ padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => { setEditingId(p._id); setEditMap(m => ({ ...m, [p._id]: { make: p.make, coo: p.coo, grade: p.grade, purity: p.purity, itemPackage: p.itemPackage, unit: p.unit } })); }}><IconEdit /></button>
               <button title="Add variant" className="btn btn-sm" style={{ background: '#f0fff4', color: '#16a34a', border: '1.5px solid #86efac', padding: '5px 8px', display: 'flex', alignItems: 'center' }} onClick={() => { setAddingInGroup(addingInGroup === group ? null : group); setInlineForm({ make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', price: '', cost: '', target: '', notes: '', ex: '' }); }}><IconPlus /></button>

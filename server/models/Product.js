@@ -10,6 +10,7 @@ const productSchema = new mongoose.Schema({
   itemPackage: { type: String, trim: true, default: '' },
   unit:        { type: String, trim: true, default: 'kg' },
   isActive:    { type: Boolean, default: true },
+  starred:     { type: Boolean, default: false },   // priority: shown on the TV live ribbon
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 }, { timestamps: true });
 

@@ -92,7 +92,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 // Update product - admin only
 router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
-    const allowed = ['group', 'name', 'make', 'coo', 'grade', 'purity', 'itemPackage', 'unit'];
+    const allowed = ['group', 'name', 'make', 'coo', 'grade', 'purity', 'itemPackage', 'unit', 'starred'];
     const update = {};
     allowed.forEach(f => { if (req.body[f] !== undefined) update[f] = req.body[f]; });
     if (update.group) update.group = update.group.toUpperCase();
