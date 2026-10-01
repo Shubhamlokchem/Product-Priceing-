@@ -371,11 +371,31 @@ export default function AdminPricing() {
    { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
   ];
   const cols2 = DEF2; // Board 2 always shows every column (empty values show as —)
-  const FS = Math.max(11, Math.min(18, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height (no wasted space)
-  // fixed (px) columns grow with the text size so big-screen text still fits
-  const COLS = cols2.map(d => { const w = d.w[twoCols ? 1 : 0]; return w.endsWith('px') ? `${Math.round(parseFloat(w) * Math.max(1, FS / 14))}px` : w; }).join(' ');
-  const mono = "'Consolas','Roboto Mono','Courier New',monospace";
-  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', padding: twoCols ? '0 5px' : '0 8px' };
+  const mono = "'Segoe UI','Inter',Arial,sans-serif";   // clean, readable TV font
+  // Column widths come from the real text (measured), so words are never cut.
+  // If everything doesn't fit the screen width, the font shrinks a little until it does.
+  const mctx2 = document.createElement('canvas').getContext('2d');
+  const tw2 = (t, font, ls = 0) => { mctx2.font = font; const str = String(t ?? ''); return mctx2.measureText(str).width + ls * str.length; };
+  const PADX = twoCols ? 10 : 16;
+  const boardW = window.innerWidth - 12 - 4;
+  const needFor = fs => cols2.map(d => {
+   const hdr = tw2(d.h, `900 ${Math.max(11, fs - 1.5)}px ${mono}`, 1);
+   const font = d.price ? `900 ${fs + 2}px ${mono}` : `${d.st?.fontWeight || 700} ${fs}px ${mono}`;
+   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(String(d.get(it, i + 1) || '—').toUpperCase(), font)), 0);
+   return Math.ceil(Math.max(hdr, val) + PADX + 2);
+  });
+  let FS = Math.max(11, Math.min(18, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
+  let need = needFor(FS);
+  for (let k = 0; k < 8 && need.reduce((a, b) => a + b, 0) > boardW && FS > 10; k++) {
+   FS = Math.max(10, Math.floor(FS * boardW / need.reduce((a, b) => a + b, 0) * 2) / 2);
+   need = needFor(FS);
+  }
+  // spare width goes to the text columns (product gets the most), so the board fills the screen
+  const spare = Math.max(0, boardW - need.reduce((a, b) => a + b, 0));
+  const share = { PRODUCT: 3, MAKE: 1.5, ORIGIN: 1, GRADE: 1, PACK: 0.8 };
+  const shareSum = cols2.reduce((a, d) => a + (share[d.h] || 0), 0) || 1;
+  const COLS = cols2.map((d, i) => `${Math.floor(need[i] + spare * (share[d.h] || 0) / shareSum)}px`).join(' ');
+  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 8px' };
   // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
   const wrap = twoCols ? { whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' } : {};
 
@@ -395,7 +415,7 @@ export default function AdminPricing() {
      ) : panels.map((pRows, pi) => (
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
-       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono }}>
+       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
         {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.align || 'left' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
@@ -403,7 +423,7 @@ export default function AdminPricing() {
         const isToday = it.date === today;
         const srNo = cur2 * perPage + ri + 1;   // continues across screens
         return (
-         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase' }}>
+         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
           {cols2.map(d => (
            <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
             style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
@@ -485,9 +505,9 @@ export default function AdminPricing() {
    const hasCost = gItems.some(it => it.cost != null);
    const hasTarget = gItems.some(it => it.target != null);
    const colW = cols.map(d => Math.min(200, Math.max(hdrW(d.h), maxOf(gItems, it => tw(txt(d, it), fnt(d))))) + 2);
-   const costW = hasCost ? Math.max(hdrW('COST'), maxOf(gItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const costW = hasCost ? Math.max(hdrW('COST ₹'), maxOf(gItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
    const mktW = Math.max(hdrW('MARKET ₹'), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
-   const tgtW = hasTarget ? Math.max(hdrW('TARGET'), maxOf(gItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const tgtW = hasTarget ? Math.max(hdrW('TARGET ₹'), maxOf(gItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
    const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + 2;
    const fixedW = costW + mktW + tgtW + UNIT_W + DATE_W + CGAP * (nCols - 1);
    // every text column must fit its longest single word (words never split)
@@ -541,7 +561,7 @@ export default function AdminPricing() {
   const liveCount = latestItems.filter(i => i.price !== null).length;
 
   return (
-   <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #123a78 0%, #0a1f45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
+   <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #123a78 0%, #0a1f45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Segoe UI','Inter',Arial,sans-serif" }}>
 
     <TvTopBar height={TOP_BAR_H} date={date} live={liveCount} countdown={countdown}
      page={curPage} pages={totalPages} pageCountdown={tvCountdown} progressPct={progressPct}
@@ -576,17 +596,17 @@ export default function AdminPricing() {
              return (
               <div style={{ zoom: scale }}>
                {/* Column headers (only the columns this card uses) */}
-               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: '0 10px', background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6 }}>
+               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: '0 10px', background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                 {cols.map(d => <span key={d.h} style={wrapS}>{d.h}</span>)}
-                {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST</span>}
+                {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST ₹</span>}
                 <span style={{ ...cellS, textAlign: 'right' }}>MARKET ₹</span>
-                {hasTarget && <span style={{ ...cellS, textAlign: 'right' }}>TARGET</span>}
+                {hasTarget && <span style={{ ...cellS, textAlign: 'right' }}>TARGET ₹</span>}
                 <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>
                 <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
-                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
                  ))}
@@ -594,7 +614,7 @@ export default function AdminPricing() {
                  <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
                  {hasTarget && <span style={{ fontSize: 13, fontWeight: 800, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{item.product.unit}</span>
-                 <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right', textTransform: 'none' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
+                 <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
                 </div>
                ))}
               </div>
