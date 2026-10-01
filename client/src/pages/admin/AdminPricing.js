@@ -4,6 +4,15 @@ import '../Dashboard.css';
 
 const REFRESH_SEC = 7;
 
+// Proper case for TV boards: "ADIPIC ACID" -> "Adipic Acid", "1-BROMO 3-CHLORO" -> "1-Bromo 3-Chloro".
+// Short codes stay in capitals (USA, UK, BASF, KH, PVC …); numbers / % / ₹ are untouched.
+const KEEP_CAPS = new Set(['USA','UK','UAE','EU','KSA','BASF','KH','LG','SK','SKC','INEOS','PVC','PET','HDPE','LDPE','LLDPE','PP','PE','MEG','DEG','TEG','IPA','MEK','DMF','DMSO','THF','EDTA','PEG','PPG','LAB','LABSA','SLES','SLS','CAS','HSN','FOB','CIF','CFR','EXW','GST','DCS','LR','AR','IP','BP','USP','EP','NF','JP']);
+const properCase = (v) => String(v ?? '').replace(/[A-Za-z][A-Za-z']*/g, w => {
+ const up = w.toUpperCase();
+ if (KEEP_CAPS.has(up)) return up;
+ return up.charAt(0) + up.slice(1).toLowerCase();
+});
+
 const fmtDate = (d) => {
  if (!d) return null;
  const dt = new Date(d);
@@ -106,7 +115,7 @@ function PriceTicker({ items, notice = '' }) {
  // 1) manual announcement (📢)  2) products starred ⭐ in Manage Products  3) default team messages
  const notes = notice.split(/\r?\n/).map(t => t.trim()).filter(Boolean).map(t => `📢 ${t}`);
  const starred = items.filter(i => i.price !== null && i.product?.starred)
-  .map(i => `★ ${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
+  .map(i => `★ ${properCase(i.product.group)}${i.product.make ? ' · ' + properCase(i.product.make) : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
  const parts = [...notes, ...starred];
  const text = parts.length ? parts.join('   •   ') : RIBBON_MESSAGES.join('   ✦   ');
  // Constant scroll speed (pixels per second) so short and long ribbons move equally fast
@@ -381,7 +390,7 @@ export default function AdminPricing() {
   const needFor = fs => cols2.map(d => {
    const hdr = tw2(d.h, `900 ${Math.max(11, fs - 1.5)}px ${mono}`, 1);
    const font = d.price ? `900 ${fs + 2}px ${mono}` : `${d.st?.fontWeight || 700} ${fs}px ${mono}`;
-   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(String(d.get(it, i + 1) || '—').toUpperCase(), font)), 0);
+   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0);
    return Math.ceil(Math.max(hdr, val) + PADX + 2);
   });
   let FS = Math.max(11, Math.min(18, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
@@ -423,13 +432,13 @@ export default function AdminPricing() {
         const isToday = it.date === today;
         const srNo = cur2 * perPage + ri + 1;   // continues across screens
         return (
-         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
+         <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 700, color: '#e0f2fe', fontVariantNumeric: 'tabular-nums' }}>
           {cols2.map(d => (
            <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
             style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 900, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
-            {d.get(it, srNo) || '—'}
+            {properCase(String(d.get(it, srNo) || '—'))}
            </div>
           ))}
          </div>
@@ -495,7 +504,7 @@ export default function AdminPricing() {
   const CGAP = 6, UNIT_W = 38, DATE_W = 52;
   const hdrW = h => tw(h, F_HDR, 0.6);
   const maxOf = (arr, f) => arr.reduce((m, x) => Math.max(m, f(x)), 0);
-  const txt = (d, it) => String(d.get(it) || '—').toUpperCase();
+  const txt = (d, it) => properCase(String(d.get(it) || '—'));
   const fnt = d => (d.h === 'MAKE' ? F_MAKE : F_ROW);
   const cardInnerW = (window.innerWidth - 20 - GAP * (GRID_COLS - 1)) / GRID_COLS - 20;
   const cellH = Math.floor((availH - GAP * (GRID_ROWS - 1)) / GRID_ROWS);
@@ -586,7 +595,7 @@ export default function AdminPricing() {
            <div key={key} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', height: cellH, minWidth: 0 }}>
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.4, textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{group}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
+             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{properCase(group)}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
              <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{total}</span>
             </div>
             {(() => {
@@ -606,14 +615,14 @@ export default function AdminPricing() {
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
-                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', fontVariantNumeric: 'tabular-nums' }}>
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                  {cols.map(d => (
-                  <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{d.get(item) || '—'}</span>
+                  <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
                  ))}
                  {hasCost && <span style={{ fontSize: 13, fontWeight: 800, color: '#475569', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
                  {hasTarget && <span style={{ fontSize: 13, fontWeight: 800, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : '—'}</span>}
-                 <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{item.product.unit}</span>
+                 <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{properCase(item.product.unit)}</span>
                  <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
                 </div>
                ))}
