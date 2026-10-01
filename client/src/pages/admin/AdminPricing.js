@@ -102,12 +102,13 @@ const RIBBON_MESSAGES = [
  'Safety first — follow PESO guidelines at every warehouse',
  'One team · one goal — let\'s make today count!',
 ]
-function PriceTicker({ items }) {
- // Only products marked ⭐ priority in Manage Products; if none, show company / market messages
- const starred = items.filter(i => i.price !== null && i.product?.starred);
- const text = starred.length
-  ? starred.map(i => `★ ${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`).join('   •   ')
-  : RIBBON_MESSAGES.join('   ✦   ');
+function PriceTicker({ items, notice = '' }) {
+ // 1) manual announcement (📢)  2) products starred ⭐ in Manage Products  3) default team messages
+ const notes = notice.split(/\r?\n/).map(t => t.trim()).filter(Boolean).map(t => `📢 ${t}`);
+ const starred = items.filter(i => i.price !== null && i.product?.starred)
+  .map(i => `★ ${i.product.group}${i.product.make ? ' · ' + i.product.make : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
+ const parts = [...notes, ...starred];
+ const text = parts.length ? parts.join('   •   ') : RIBBON_MESSAGES.join('   ✦   ');
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
    <div style={{ display: 'inline-block', animation: `ticker ${Math.max(25, Math.round(text.length * 0.11))}s linear infinite`, paddingLeft: '100%' }}>
@@ -229,6 +230,25 @@ export default function AdminPricing() {
   document.addEventListener('mousedown', h);
   return () => document.removeEventListener('mousedown', h);
  }, []);
+
+ // TV ribbon announcement (saved on the server, shared by every screen)
+ const [ribbonText, setRibbonText] = useState('');
+ const [showRibbonEd, setShowRibbonEd] = useState(false);
+ const [ribbonDraft, setRibbonDraft] = useState('');
+ const [ribbonSaving, setRibbonSaving] = useState(false);
+ const ribbonRef = useRef(null);
+ const loadRibbon = useCallback(() => { api.get('/settings/ribbon').then(r => setRibbonText(r.data?.text || '')).catch(() => {}); }, []);
+ useEffect(() => { loadRibbon(); const t = setInterval(loadRibbon, 30000); return () => clearInterval(t); }, [loadRibbon]);
+ useEffect(() => {
+  const h = e => { if (ribbonRef.current && !ribbonRef.current.contains(e.target)) setShowRibbonEd(false); };
+  document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h);
+ }, []);
+ const saveRibbon = async (text) => {
+  setRibbonSaving(true);
+  try { const r = await api.put('/settings/ribbon', { text }); setRibbonText(r.data?.text || ''); setShowRibbonEd(false); }
+  catch (err) { setError(err.response?.data?.message || 'Could not save the ribbon text'); }
+  finally { setRibbonSaving(false); }
+ };
 
  const loadData = useCallback(async (showSpinner = false) => {
   if (showSpinner) setLoading(true);
@@ -396,7 +416,7 @@ export default function AdminPricing() {
     {/* Ticker (same as Price Board 1) */}
     <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
      <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
     </div>
 
    </div>
@@ -592,7 +612,7 @@ export default function AdminPricing() {
     {/* ── Ticker ── */}
     <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
      <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
     </div>
     <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
    </div>
@@ -644,6 +664,37 @@ export default function AdminPricing() {
 
     {/* Refresh */}
     <button onClick={loadData} style={{ padding: '6px 12px', background: '#f0f5ff', color: '#1a3a6b', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}>↻ Refresh</button>
+
+    {/* Ribbon announcement editor */}
+    <div style={{ position: 'relative', flexShrink: 0 }} ref={ribbonRef}>
+     <button onClick={() => { setRibbonDraft(ribbonText); setShowRibbonEd(v => !v); }}
+      title="TV ribbon announcement"
+      style={{ position: 'relative', padding: '6px 10px', background: ribbonText ? '#fef3c7' : '#fff', color: '#92400e', border: `1.5px solid ${ribbonText ? '#f59e0b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 13, cursor: 'pointer', lineHeight: 1 }}>
+      📢
+      {ribbonText && <span style={{ position: 'absolute', top: -4, right: -4, width: 9, height: 9, borderRadius: 99, background: '#f59e0b', border: '2px solid #fff' }} />}
+     </button>
+     {showRibbonEd && (
+      <div style={{ position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 300, width: 340, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 14px 36px rgba(15,40,80,0.18)', padding: 12 }}>
+       <div style={{ fontSize: 12, fontWeight: 800, color: '#1a3a6b', marginBottom: 2 }}>📢 TV ribbon announcement</div>
+       <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>Shown first on the gold ribbon of Price Board 1 &amp; 2. One message per line.</div>
+       <textarea value={ribbonDraft} onChange={e => setRibbonDraft(e.target.value)} rows={4} autoFocus
+        placeholder={'e.g. Office closed on Saturday\nNew ACETONE stock arrived at Bhiwandi'}
+        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', resize: 'vertical', outline: 'none' }} />
+       <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <button onClick={() => saveRibbon(ribbonDraft)} disabled={ribbonSaving}
+         style={{ flex: 1, padding: '7px', background: 'linear-gradient(135deg,#1d58a8,#0e9f7a)', color: '#fff', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 800, cursor: 'pointer' }}>
+         {ribbonSaving ? 'Saving…' : 'Save & show'}
+        </button>
+        {ribbonText && (
+         <button onClick={() => saveRibbon('')} disabled={ribbonSaving}
+          style={{ padding: '7px 12px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          Clear
+         </button>
+        )}
+       </div>
+      </div>
+     )}
+    </div>
 
     {/* TV buttons */}
     <button onClick={() => setTvMode(true)} title="Full-screen live price board"

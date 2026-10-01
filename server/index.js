@@ -7,6 +7,7 @@ const authRoutes    = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const priceRoutes   = require('./routes/prices');
 const queryRoutes   = require('./routes/queries');
+const settingRoutes = require('./routes/settings');
 
 const app = express();
 app.use(cors());
@@ -16,6 +17,7 @@ app.use('/api/auth',     authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/prices',   priceRoutes);
 app.use('/api/queries',  queryRoutes);
+app.use('/api/settings', settingRoutes);
 
 app.get('/', (req, res) => res.json({ message: 'PricingHub API running' }));
 
