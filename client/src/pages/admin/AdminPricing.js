@@ -111,7 +111,7 @@ function PriceTicker({ items, notice = '' }) {
  const text = parts.length ? parts.join('   •   ') : RIBBON_MESSAGES.join('   ✦   ');
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
-   <div style={{ display: 'inline-block', animation: `ticker ${Math.max(25, Math.round(text.length * 0.11))}s linear infinite`, paddingLeft: '100%' }}>
+   <div style={{ display: 'inline-block', animation: `ticker ${Math.max(20, Math.round(text.length * 0.085))}s linear infinite`, paddingLeft: '100%' }}>
     {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
    </div>
    <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
@@ -153,7 +153,7 @@ function GroupRow({ group, groupItems }) {
     <div className="table-wrap">
      <table>
       <thead>
-       <tr><th>Make</th><th>COO</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th><th style={{ color: '#64748b' }}>Cost (₹)</th><th style={{ color: '#e8a020' }}>Market (₹)</th><th style={{ color: '#7c3aed' }}>Target (₹)</th><th>Notes</th><th>Updated</th></tr>
+       <tr><th>Make</th><th>Origin</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th><th style={{ color: '#64748b' }}>Cost (₹)</th><th style={{ color: '#e8a020' }}>Market (₹)</th><th style={{ color: '#7c3aed' }}>Target (₹)</th><th>Notes</th><th>Updated</th></tr>
       </thead>
       <tbody>
        {groupItems.map(item => (
@@ -290,7 +290,7 @@ export default function AdminPricing() {
  const toggleProduct = id => setFilterProducts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
  const exportPrices = () => {
-  const headers = ['group','make','coo','grade','purity','package','unit','cost','market','target','notes','ex','date'];
+  const headers = ['group','make','origin','grade','purity','package','unit','cost','market','target','notes','ex','date'];
   const rows = displayItems
    .filter(i => i.price !== null)
    .map(i => [
@@ -350,7 +350,7 @@ export default function AdminPricing() {
    { h: 'SR NO.',  get: (it, n) => n, w: ['80px', '60px'], always: true, align: 'center', st: { color: '#fcd34d', fontWeight: 900 } },
    { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,3.2fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
    { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a' } },
-   { h: 'COO',     get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
+   { h: 'ORIGIN',  get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
    { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd' } },
    { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc' } },
    { h: 'PACK',    get: it => it.product.itemPackage, w: ['100px', '60px'], wrap: true, st: { color: '#a7f3d0' } },
@@ -450,7 +450,7 @@ export default function AdminPricing() {
   // Card columns — each card shows only the ones it has data for
   const DEF1 = [
    { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
-   { h: 'COO',    get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
+   { h: 'ORIGIN', get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
    { h: 'GRADE',  get: it => it.product.grade,       w: 'minmax(0,1fr)',   st: { color: '#6d28d9' } },
    { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1' } },
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },

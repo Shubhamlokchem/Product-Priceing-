@@ -81,11 +81,11 @@ export default function UserQuery() {
  <input name="make" value={form.make} onChange={handle} placeholder="e.g. BASF" />
  </div>
  <div className="form-field">
- <label>COO (Country of Origin)</label>
+ <label>Origin (Country)</label>
  <input name="coo" value={form.coo} onChange={handle} placeholder="e.g. Germany" />
  </div>
  <div className="form-field">
- <label>Origin</label>
+ <label>Region</label>
  <input name="origin" value={form.origin} onChange={handle} placeholder="e.g. EU" />
  </div>
  <div className="form-field">
@@ -145,7 +145,7 @@ export default function UserQuery() {
 
  {/* Details */}
  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, background: '#f8fafc', padding: '8px 12px', borderRadius: 8, marginBottom: 10 }}>
- {[['Make', q.make], ['COO', q.coo], ['Origin', q.origin], ['Grade', q.grade], ['Purity', q.purity]].map(([label, val]) => val ? (
+ {[['Make', q.make], ['Origin', q.coo], ['Region', q.origin], ['Grade', q.grade], ['Purity', q.purity]].map(([label, val]) => val ? (
  <div key={label}>
  <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>{label}</div>
  <div style={{ fontSize: 13, fontWeight: 600, color: '#1a3a6b' }}>{val}</div>

@@ -207,7 +207,7 @@ export default function AdminQueries() {
          </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5, marginTop: 5 }}>
-         {[['make','Make'],['coo','COO'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
+         {[['make','Make'],['coo','Origin'],['grade','Grade'],['purity','Purity']].map(([k, label]) => (
           <input key={k} value={newDraft[k]} onChange={e => setNewDraft(d => ({ ...d, [k]: e.target.value }))}
            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addNewItem(); } }}
            placeholder={label} style={{ ...inp, minWidth: 0 }} />
@@ -222,7 +222,7 @@ export default function AdminQueries() {
     <input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
      placeholder="Message / notes (sent with every product)" style={{ ...inp, flex: 1, minWidth: 220 }} />
     <input value={form.origin} onChange={e => setForm(f => ({ ...f, origin: e.target.value }))}
-     placeholder="Origin" style={{ ...inp, width: 90 }} />
+     placeholder="Region" style={{ ...inp, width: 90 }} />
     <button type="submit" disabled={submitting}
      style={{ padding: '7px 18px', background: 'linear-gradient(135deg,#1a3a6b,#2451a0)', color: '#fff', border: 'none', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 6px rgba(26,58,107,0.25)' }}>
      {submitting ? 'Sending…' : totalChosen > 1 ? `Send ${totalChosen} Queries` : 'Send'}
@@ -255,7 +255,7 @@ export default function AdminQueries() {
  ) : (
   displayed.map(q => {
    const replied = q.status === 'replied';
-   const details = [['Make', q.make], ['COO', q.coo], ['Origin', q.origin], ['Grade', q.grade], ['Purity', q.purity]].filter(([, v]) => v);
+   const details = [['Make', q.make], ['Origin', q.coo], ['Region', q.origin], ['Grade', q.grade], ['Purity', q.purity]].filter(([, v]) => v);
    return (
     <div key={q._id} style={{ marginBottom: 10, border: `1px solid ${replied ? '#bbf7d0' : '#fde68a'}`, borderLeft: `4px solid ${replied ? '#16a34a' : '#e8a020'}`, borderRadius: 10, background: '#fff', overflow: 'hidden' }}>
 

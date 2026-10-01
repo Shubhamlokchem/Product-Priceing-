@@ -309,7 +309,7 @@ export default function AdminProducts() {
 
  // Export all products + their prices for the selected date (re-upload this file to update prices)
  const exportProducts = () => {
-  const headers = ['id','group','make','coo','grade','purity','package','unit','cost','market','target','ex','notes'];
+  const headers = ['id','group','make','origin','grade','purity','package','unit','cost','market','target','ex','notes'];
   const rows = products.map(p => {
    const e = priceMap[p._id] || {};
    return [p._id, p.group, p.make||'', p.coo||'', p.grade||'', p.purity||'', p.itemPackage||'', p.unit||'kg',
@@ -319,7 +319,7 @@ export default function AdminProducts() {
  };
 
  const downloadSampleCSV = () => {
-  const sample = `group,make,coo,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,120\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
+  const sample = `group,make,origin,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,120\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
   const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
  };
 
@@ -357,7 +357,9 @@ export default function AdminProducts() {
     .filter(line => line.trim())
     .map(line => {
      const vals = splitCSVLine(line);
-     return Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
+     const o = Object.fromEntries(hdrs.map((h,i) => [h, vals[i]||'']));
+     if (o.coo === undefined && o.origin !== undefined) o.coo = o.origin; // 'origin' column = COO (old files with 'coo' still work)
+     return o;
     })
     .filter(r => r.group);
 
@@ -780,7 +782,7 @@ export default function AdminProducts() {
       {/* Product name — always typed (new product) */}
       <input value={addForm.group} onChange={e => setAddForm(f => ({ ...f, group: e.target.value }))} placeholder="Product name *" required
        style={{ padding: '6px 9px', border: '1.5px solid #1a6db5', borderRadius: 7, fontSize: 12, width: 190, fontWeight: 600 }} />
-      {[['make','Make'],['coo','COO'],['grade','Grade'],['purity','Purity'],['itemPackage','Pkg']].map(([field, label]) => (
+      {[['make','Make'],['coo','Origin'],['grade','Grade'],['purity','Purity'],['itemPackage','Pkg']].map(([field, label]) => (
        <input key={field} value={addForm[field]} onChange={e => setAddForm(f => ({ ...f, [field]: e.target.value }))}
         placeholder={label} style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 80 }} />
       ))}
@@ -856,7 +858,7 @@ export default function AdminProducts() {
  <thead>
  <tr>
  <th style={{ width: 32, padding: '8px 6px' }} />
- <th>Make</th><th>COO</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
+ <th>Make</th><th>Origin</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
  <th style={{ color: '#64748b', whiteSpace: 'nowrap' }}>Cost (₹)</th><th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>EX</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Updated</th><th style={{ width: 120 }}>Actions</th>
  </tr>
  </thead>
@@ -996,7 +998,7 @@ export default function AdminProducts() {
             <datalist id={`dl-make-${group}`}>{[...new Set(items.map(p=>p.make).filter(Boolean))].map(v=><option key={v} value={v}/>)}</datalist>
            </td>
            <td>
-            <input list={`dl-coo-${group}`} placeholder="COO" value={inlineForm.coo} onChange={e => setInlineForm(f => ({ ...f, coo: e.target.value }))}
+            <input list={`dl-coo-${group}`} placeholder="Origin" value={inlineForm.coo} onChange={e => setInlineForm(f => ({ ...f, coo: e.target.value }))}
              style={{ width: 70, padding: '4px 6px', border: '1.5px solid #16a34a', borderRadius: 6, fontSize: 12 }} />
             <datalist id={`dl-coo-${group}`}>{[...new Set(items.map(p=>p.coo).filter(Boolean))].map(v=><option key={v} value={v}/>)}</datalist>
            </td>

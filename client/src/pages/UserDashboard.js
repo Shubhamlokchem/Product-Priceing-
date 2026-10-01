@@ -140,7 +140,7 @@ export default function UserDashboard() {
  {/* Search */}
  <input
  style={{ padding: '9px 14px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 13, flex: 1, minWidth: 180 }}
- placeholder=" Search name, make, COO, grade..."
+ placeholder=" Search name, make, origin, grade..."
  value={search}
  onChange={e => setSearch(e.target.value)}
  />
@@ -185,7 +185,7 @@ export default function UserDashboard() {
  <thead>
  <tr>
  <th>Make</th>
- <th>COO</th>
+ <th>Origin</th>
  <th>Grade</th>
  <th>Purity</th>
  <th>Package</th>

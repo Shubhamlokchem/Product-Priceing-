@@ -147,7 +147,7 @@ function ProductSlot({ label, color, allProducts, value, onChange }) {
      {/* Search inside dropdown */}
      <div style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
       <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
-       placeholder="Search group, make, COO…"
+       placeholder="Search group, make, origin…"
        style={{ width: '100%', padding: '6px 10px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, boxSizing: 'border-box', outline: 'none' }} />
      </div>
      {/* Results */}
