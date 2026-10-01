@@ -25,13 +25,12 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
      <img src="/logo.png" alt="Lok Chemicals" style={{ width: 31, height: 'auto' }} />
     </div>
     <div style={{ lineHeight: 1.1, minWidth: 0 }}>
-     <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>Live Product Prices</div>
+     <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>Live Price Index</div>
      <div style={{ fontSize: 9.5, fontWeight: 800, color: '#7dd3fc', letterSpacing: 2.2 }}>LOK CHEMICALS</div>
     </div>
 
     {/* status pill: date · live · refresh */}
     <div style={{ ...glass, display: 'flex', alignItems: 'center', gap: 10, padding: '5px 12px', marginLeft: 6, fontSize: 12, fontWeight: 700, color: '#e0f2fe', whiteSpace: 'nowrap' }}>
-     <span>{date}</span>{sep}
      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900 }}>
       <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'tvpulse 1.4s infinite' }} />{live} LIVE
      </span>{sep}
@@ -56,16 +55,15 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
       {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
      </div>
      <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
-      {now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+      {`${now.toLocaleDateString('en-GB', { weekday: 'short' })}, ${String(now.getDate()).padStart(2, '0')} ${now.toLocaleDateString('en-GB', { month: 'short' })} ${now.getFullYear()}`}
      </div>
     </div>
 
     {/* exit */}
-    <button onClick={onExit} title="Exit" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+    <button onClick={onExit} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, padding: 0, borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
      onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
-     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-     Exit
+     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
     </button>
    </div>
    {/* page progress line */}
@@ -281,7 +279,7 @@ export default function AdminPricing() {
    .filter(i => i.price !== null)
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
-  const HDR_H = 56, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
+  const HDR_H = 56, COLHDR_H = 34, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
   const TICK_H = 40;
   const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 24;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
@@ -364,12 +362,6 @@ export default function AdminPricing() {
      <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
     </div>
 
-    {/* Footer */}
-    <div style={{ height: FOOT_H, flexShrink: 0, background: '#082c63', borderTop: '2px solid #1e4f9a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', fontFamily: mono, fontSize: 13, color: '#93c5fd', fontWeight: 700, letterSpacing: 1 }}>
-     <span>{new Date().toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase()}</span>
-     <span><span style={{ color: '#4ade80' }}>■</span> UPDATED TODAY &nbsp;&nbsp; <span style={{ color: '#fbbf24' }}>■</span> EARLIER RATE</span>
-     <span>{pages2 > 1 ? `NEXT PAGE IN ${tv2Countdown}s` : `REFRESH ${countdown}s`}</span>
-    </div>
    </div>
   );
  }
