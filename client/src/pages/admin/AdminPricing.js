@@ -438,7 +438,7 @@ export default function AdminPricing() {
             style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 900, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
-            {properCase(String(d.get(it, srNo) || '—'))}
+            {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}
            </div>
           ))}
          </div>
@@ -506,7 +506,8 @@ export default function AdminPricing() {
   const maxOf = (arr, f) => arr.reduce((m, x) => Math.max(m, f(x)), 0);
   const txt = (d, it) => properCase(String(d.get(it) || '—'));
   const fnt = d => (d.h === 'MAKE' ? F_MAKE : F_ROW);
-  const cardInnerW = (window.innerWidth - 20 - GAP * (GRID_COLS - 1)) / GRID_COLS - 20;
+  const CARD_PAD = 7;   // left/right padding inside a card row
+  const cardW = (window.innerWidth - 20 - GAP * (GRID_COLS - 1)) / GRID_COLS - 2;
   const cellH = Math.floor((availH - GAP * (GRID_ROWS - 1)) / GRID_ROWS);
 
   const layoutFor = gItems => {
@@ -515,16 +516,23 @@ export default function AdminPricing() {
    const hasTarget = gItems.some(it => it.target != null);
    const colW = cols.map(d => Math.min(200, Math.max(hdrW(d.h), maxOf(gItems, it => tw(txt(d, it), fnt(d))))) + 2);
    const costW = hasCost ? Math.max(hdrW('COST ₹'), maxOf(gItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
-   const mktW = Math.max(hdrW('MARKET ₹'), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
+   // Same date / same unit for the whole card → shown once (date in the card header, unit in the MARKET header)
+   const dateSet = new Set(gItems.map(it => fmtDate(it.updatedAt || it.date) || ''));
+   const unitSet = new Set(gItems.map(it => properCase(it.product.unit || '')));
+   const showDate = dateSet.size > 1, showUnit = unitSet.size > 1;
+   const oneDate = showDate ? '' : [...dateSet][0];
+   const mktHdr = showUnit ? 'MARKET ₹' : `MARKET ₹/${String([...unitSet][0] || '').toUpperCase()}`;
+   const mktW = Math.max(hdrW(mktHdr), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
    const tgtW = hasTarget ? Math.max(hdrW('TARGET ₹'), maxOf(gItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
-   const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + 2;
-   const fixedW = costW + mktW + tgtW + UNIT_W + DATE_W + CGAP * (nCols - 1);
+   const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + (showUnit ? 1 : 0) + (showDate ? 1 : 0);
+   const fixedW = costW + mktW + tgtW + (showUnit ? UNIT_W : 0) + (showDate ? DATE_W : 0) + CGAP * (nCols - 1);
    // every text column must fit its longest single word (words never split)
    const minW = cols.map(d => Math.min(150, Math.max(hdrW(d.h.split(' ')[0]), maxOf(gItems, it => maxOf(txt(d, it).split(/\s+/), w => tw(w, fnt(d)))))) + 2);
    const reqMin = minW.reduce((a, b) => a + b, 0) + fixedW;
    // if the card is too narrow, shrink this card's table a little instead of cutting text
-   const scale = Math.min(1, cardInnerW / reqMin);
-   const innerW = cardInnerW / scale;
+   // shrink when the card is too narrow; grow (up to 1.35×) on big TVs so text is easier to read
+   const scale = Math.min(1.35, cardW / (reqMin + 2 * CARD_PAD));
+   const innerW = cardW / scale - 2 * CARD_PAD;
    const textAvail = innerW - fixedW;
    // start every column at its minimum, share the extra space towards each column's full width
    let colPx = [...minW];
@@ -538,11 +546,11 @@ export default function AdminPricing() {
     ...(hasCost ? [`${costW}px`] : []),
     cols.length ? `${mktW}px` : `minmax(${mktW}px, 1fr)`,
     ...(hasTarget ? [`${tgtW}px`] : []),
-    `${UNIT_W}px`, `${DATE_W}px`,
+    ...(showUnit ? [`${UNIT_W}px`] : []), ...(showDate ? [`${DATE_W}px`] : []),
    ].join(' ');
    const colhdrH = cols.some((d, i) => hdrW(d.h) > colPx[i]) ? 30 : 22;
    const rowH = it => (cols.some((d, i) => tw(txt(d, it), fnt(d)) > colPx[i] + 1) ? ROW_H2L : ROW_H);
-   return { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale };
+   return { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale, showDate, showUnit, oneDate, mktHdr };
   };
 
   // Split each product into equal-size cards; a product with more rows continues: "(1/2)", "(2/2)"
@@ -596,34 +604,37 @@ export default function AdminPricing() {
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
              <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{properCase(group)}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
-             <span style={{ flexShrink: 0, fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800, marginLeft: 6 }}>{total}</span>
+             <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 6 }}>
+              {L.oneDate && <span style={{ fontSize: 11, color: '#fde68a', fontWeight: 800, whiteSpace: 'nowrap' }}>{L.oneDate}</span>}
+              <span style={{ fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800 }}>{total}</span>
+             </span>
             </div>
             {(() => {
-             const { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale } = L;
+             const { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale, showDate, showUnit, mktHdr } = L;
              const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
              const wrapS = { minWidth: 0, overflow: 'hidden', whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'normal', overflowWrap: 'normal' };
              return (
               <div style={{ zoom: scale }}>
                {/* Column headers (only the columns this card uses) */}
-               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: '0 10px', background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6, textTransform: 'uppercase' }}>
+               <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: `0 ${CARD_PAD}px`, background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                 {cols.map(d => <span key={d.h} style={wrapS}>{d.h}</span>)}
                 {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST ₹</span>}
-                <span style={{ ...cellS, textAlign: 'right' }}>MARKET ₹</span>
+                <span style={{ ...cellS, textAlign: 'right' }}>{mktHdr}</span>
                 {hasTarget && <span style={{ ...cellS, textAlign: 'right' }}>TARGET ₹</span>}
-                <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>
-                <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>
+                {showUnit && <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>}
+                {showDate && <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>}
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
-                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: '0 10px', borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
+                <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: `0 ${CARD_PAD}px`, borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
                  ))}
                  {hasCost && <span style={{ fontSize: 13, fontWeight: 800, color: '#475569', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
                  {hasTarget && <span style={{ fontSize: 13, fontWeight: 800, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : '—'}</span>}
-                 <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{properCase(item.product.unit)}</span>
-                 <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>
+                 {showUnit && <span style={{ fontSize: 11, fontWeight: 800, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{properCase(item.product.unit)}</span>}
+                 {showDate && <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>}
                 </div>
                ))}
               </div>
