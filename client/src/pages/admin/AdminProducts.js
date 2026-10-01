@@ -820,7 +820,6 @@ export default function AdminProducts() {
   const nToday = items.filter(p => pv(p) && !priceMap[p._id]?.isLatest).length;
   const nAny = items.filter(pv).length;
   const accent = nToday > 0 ? '#16a34a' : nAny > 0 ? '#e8a020' : '#cbd5e1';
-  const pricedItems = items.filter(pv);
   return (
   <div key={group} style={{ marginBottom: 5, border: `1px solid ${isOpen ? '#c7d7fa' : '#e8ecf3'}`, borderLeft: `4px solid ${accent}`, borderRadius: 9, overflow: 'hidden', background: '#fff', boxShadow: isOpen ? '0 3px 12px rgba(26,58,107,0.08)' : 'none' }}>
    {/* Group header */}
@@ -846,17 +845,8 @@ export default function AdminProducts() {
      <polyline points="9 18 15 12 9 6"/>
     </svg>
     <span style={{ fontWeight: 700, color: '#1a3a6b', fontSize: 13 }}>{group}</span>
-    <div style={{ flex: 1, display: 'flex', gap: 5, justifyContent: 'flex-end', flexWrap: 'nowrap', overflow: 'hidden' }}>
-     {pricedItems.slice(0, 3).map(p => {
-      const old = priceMap[p._id]?.isLatest;
-      return (
-       <span key={p._id} style={{ fontSize: 11, background: old ? '#fffbeb' : '#ecfdf3', color: old ? '#b45309' : '#15803d', border: `1px solid ${old ? '#fde68a' : '#bbf7d0'}`, padding: '1px 7px', borderRadius: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>
-        <span style={{ fontWeight: 500, opacity: 0.8 }}>{p.make || p.coo || p.grade || '—'}</span> ₹{Number(priceMap[p._id].price).toLocaleString()}
-       </span>
-      );
-     })}
-     {pricedItems.length > 3 && <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, whiteSpace: 'nowrap' }}>+{pricedItems.length - 3} more</span>}
-    </div>
+    <span style={{ fontSize: 11, color: '#94a3b8', background: '#f1f5f9', padding: '1px 7px', borderRadius: 999 }}>{items.length}</span>
+    <div style={{ flex: 1 }} />
     </div>{/* /clickable expand area */}
    </div>
 

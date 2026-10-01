@@ -137,13 +137,8 @@ function GroupRow({ group, groupItems }) {
     <span style={{ fontSize: 11, fontWeight: 600, color: priced > 0 ? '#16a34a' : '#d1d5db', marginLeft: 2 }}>
      {priced}/{groupItems.length} priced
     </span>
-    {/* Latest prices preview */}
+    {/* Last updated date (prices hidden until expanded) */}
     <div style={{ flex: 1, display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
-     {groupItems.filter(i => i.price !== null).slice(0, 3).map(i => (
-      <span key={i.product._id} style={{ fontSize: 11, background: '#e8f5e9', color: '#15803d', padding: '2px 8px', borderRadius: 6, fontWeight: 700 }}>
-       {i.product.make || i.product.grade || '—'} ₹{i.price.toLocaleString()}
-      </span>
-     ))}
      {/* Most recent updated date for this group */}
      {(() => {
       const dates = groupItems.map(i => i.updatedAt || i.date).filter(Boolean);
@@ -202,6 +197,7 @@ export default function AdminPricing() {
  const [countdown, setCountdown] = useState(REFRESH_SEC);
  const [filterGroups, setFilterGroups] = useState(new Set());
  const [showGroupDD, setShowGroupDD] = useState(false);
+ const [groupSearch, setGroupSearch] = useState('');
  const [filterProducts, setFilterProducts] = useState(new Set());
  const [showProductDD, setShowProductDD] = useState(false);
  const [productSearch, setProductSearch] = useState('');
@@ -643,20 +639,45 @@ export default function AdminPricing() {
       style={{ padding: '6px 12px', border: `1.5px solid ${filterGroups.size ? '#1a3a6b' : '#e5e7eb'}`, borderRadius: 7, fontSize: 12, background: '#fff', cursor: 'pointer', color: filterGroups.size ? '#1a3a6b' : '#9ca3af', fontWeight: filterGroups.size ? 600 : 400, whiteSpace: 'nowrap' }}>
       {filterGroups.size === 0 ? 'All Groups' : `${filterGroups.size} group${filterGroups.size > 1 ? 's' : ''}`} ▾
      </button>
-     {showGroupDD && (
-      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 200, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 220, maxHeight: 280, overflowY: 'auto', padding: '6px 0' }}>
-       <div style={{ padding: '4px 12px 6px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>Groups</span>
-        {filterGroups.size > 0 && <button onClick={() => setFilterGroups(new Set())} style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear</button>}
+     {showGroupDD && (() => {
+      const q = groupSearch.trim().toLowerCase();
+      const shown = q ? groups.filter(g => String(g).toLowerCase().includes(q)) : groups;
+      const allOn = shown.length > 0 && shown.every(g => filterGroups.has(g));
+      const someOn = !allOn && shown.some(g => filterGroups.has(g));
+      const toggleAll = () => setFilterGroups(prev => {
+       const n = new Set(prev);
+       if (allOn) shown.forEach(g => n.delete(g)); else shown.forEach(g => n.add(g));
+       return n;
+      });
+      return (
+      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 200, background: '#fff', border: '1.5px solid #e5e7eb', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', width: 250, overflow: 'hidden' }}>
+       <div style={{ padding: 8, borderBottom: '1px solid #f3f4f6' }}>
+        <div style={{ position: 'relative' }}>
+         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.4" strokeLinecap="round" style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+         <input value={groupSearch} onChange={e => setGroupSearch(e.target.value)} placeholder="Search group…" autoFocus
+          style={{ width: '100%', boxSizing: 'border-box', padding: '6px 26px 6px 28px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12, outline: 'none' }} />
+         {groupSearch && <button onClick={() => setGroupSearch('')} title="Clear search" style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: 2 }}>✕</button>}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 7 }}>
+         <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: shown.length ? 'pointer' : 'default', fontSize: 12, fontWeight: 700, color: '#1a3a6b', padding: '0 4px' }}>
+          <input type="checkbox" checked={allOn} disabled={!shown.length} ref={el => { if (el) el.indeterminate = someOn; }} onChange={toggleAll} style={{ accentColor: '#1a3a6b', cursor: 'pointer', width: 14, height: 14 }} />
+          {q ? `Select all results (${shown.length})` : `Select all (${groups.length})`}
+         </label>
+         {filterGroups.size > 0 && <button onClick={() => setFilterGroups(new Set())} style={{ fontSize: 11, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Clear ({filterGroups.size})</button>}
+        </div>
        </div>
-       {groups.map(g => (
-        <label key={g} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: filterGroups.has(g) ? '#f0f5ff' : 'transparent', color: filterGroups.has(g) ? '#1a3a6b' : '#374151' }}>
-         <input type="checkbox" checked={filterGroups.has(g)} onChange={() => toggleGroup(g)} style={{ accentColor: '#1a3a6b', cursor: 'pointer' }} />
-         {g}
-        </label>
-       ))}
+       <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0' }}>
+        {shown.length === 0 && <div style={{ padding: '10px 12px', fontSize: 12, color: '#9ca3af' }}>No group matches “{groupSearch}”</div>}
+        {shown.map(g => (
+         <label key={g} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, background: filterGroups.has(g) ? '#f0f5ff' : 'transparent', color: filterGroups.has(g) ? '#1a3a6b' : '#374151' }}>
+          <input type="checkbox" checked={filterGroups.has(g)} onChange={() => toggleGroup(g)} style={{ accentColor: '#1a3a6b', cursor: 'pointer', width: 14, height: 14, flexShrink: 0 }} />
+          {g}
+         </label>
+        ))}
+       </div>
       </div>
-     )}
+      );
+     })()}
     </div>
 
 
