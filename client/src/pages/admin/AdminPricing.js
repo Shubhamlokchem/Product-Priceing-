@@ -29,42 +29,39 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
      <div style={{ fontSize: 9.5, fontWeight: 800, color: '#7dd3fc', letterSpacing: 2.2 }}>LOK CHEMICALS</div>
     </div>
 
-    {/* status pill: date · live · refresh */}
-    <div style={{ ...glass, display: 'flex', alignItems: 'center', gap: 10, padding: '5px 12px', marginLeft: 6, fontSize: 12, fontWeight: 700, color: '#e0f2fe', whiteSpace: 'nowrap' }}>
-     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900 }}>
-      <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'tvpulse 1.4s infinite' }} />{live} LIVE
-     </span>{sep}
-     <span style={{ color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontVariantNumeric: 'tabular-nums' }}>↻ {countdown}s</span>
-    </div>
-
     <div style={{ flex: 1 }} />
 
-    {/* page control (only when there is more than one page) */}
-    {pages > 1 && (
-     <div style={{ ...glass, display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', whiteSpace: 'nowrap' }}>
-      <button onClick={onPrev} style={navB} aria-label="Previous page">‹</button>
-      <span style={{ fontSize: 12.5, color: '#fff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{page + 1} / {pages}</span>
-      <button onClick={onNext} style={navB} aria-label="Next page">›</button>
-      <span style={{ fontSize: 11, color: '#fcd34d', fontWeight: 900, minWidth: 24, textAlign: 'right', paddingRight: 4, fontVariantNumeric: 'tabular-nums' }}>{pageCountdown}s</span>
-     </div>
-    )}
-
-    {/* clock */}
-    <div style={{ textAlign: 'right', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
-     <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 1, fontVariantNumeric: 'tabular-nums' }}>
-      {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-     </div>
-     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
-      {`${now.toLocaleDateString('en-GB', { weekday: 'short' })}, ${String(now.getDate()).padStart(2, '0')} ${now.toLocaleDateString('en-GB', { month: 'short' })} ${now.getFullYear()}`}
-     </div>
+    {/* everything in one rounded glass box: live · refresh · page · clock · exit */}
+    <div style={{ ...glass, borderRadius: 16, display: 'flex', alignItems: 'center', gap: 12, padding: '4px 6px 4px 14px', whiteSpace: 'nowrap', boxShadow: '0 4px 14px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.12)' }}>
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900, fontSize: 12 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'tvpulse 1.4s infinite' }} />{live} LIVE
+     </span>
+     {sep}
+     <span style={{ fontSize: 12, fontWeight: 700, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontVariantNumeric: 'tabular-nums' }}>↻ {countdown}s</span>
+     {pages > 1 && <>
+      {sep}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+       <button onClick={onPrev} style={navB} aria-label="Previous page">‹</button>
+       <span style={{ fontSize: 12.5, color: '#fff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{page + 1} / {pages}</span>
+       <button onClick={onNext} style={navB} aria-label="Next page">›</button>
+       <span style={{ fontSize: 11, color: '#fcd34d', fontWeight: 900, minWidth: 22, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{pageCountdown}s</span>
+      </span>
+     </>}
+     {sep}
+     <span style={{ textAlign: 'right', lineHeight: 1.05 }}>
+      <span style={{ display: 'block', fontSize: 19, fontWeight: 800, color: '#fff', letterSpacing: 0.8, fontVariantNumeric: 'tabular-nums' }}>
+       {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      </span>
+      <span style={{ display: 'block', fontSize: 9.5, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
+       {`${now.toLocaleDateString('en-GB', { weekday: 'short' })}, ${String(now.getDate()).padStart(2, '0')} ${now.toLocaleDateString('en-GB', { month: 'short' })} ${now.getFullYear()}`}
+      </span>
+     </span>
+     <button onClick={onExit} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, padding: 0, borderRadius: 11, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer' }}
+      onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+     </button>
     </div>
-
-    {/* exit */}
-    <button onClick={onExit} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, padding: 0, borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
-     onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
-     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
-     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
-    </button>
    </div>
    {/* page progress line */}
    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
@@ -279,13 +276,15 @@ export default function AdminPricing() {
    .filter(i => i.price !== null)
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
-  const HDR_H = 56, COLHDR_H = 34, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
-  const TICK_H = 40;
-  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 24;
+  const HDR_H = 56, COLHDR_H = 28, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
+  const TICK_H = 34;
+  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 12;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
   const twoCols = false;
-  const ROW_H2 = 34;
-  const perPanel = Math.max(1, Math.floor(boardH / ROW_H2));
+  // At least 25 products per screen: rows shrink to fit on small screens, stay 34px where there is room
+  const MIN_ROWS = 25;
+  const perPanel = Math.max(MIN_ROWS, Math.floor(boardH / 34));
+  const ROW_H2 = Math.floor((boardH / perPanel) * 10) / 10;
   const perPage = perPanel;
   const pages2 = Math.max(1, Math.ceil(rows2.length / perPage));
   const cur2 = tv2Page % pages2;
@@ -295,7 +294,7 @@ export default function AdminPricing() {
   // Column definitions — Board 2 shows all of them
   const DEF2 = [
    { h: 'SR NO.',  get: (it, n) => n, w: ['80px', '60px'], always: true, align: 'center', st: { color: '#fcd34d', fontWeight: 900 } },
-   { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,2.4fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
+   { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,3.2fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
    { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a' } },
    { h: 'COO',     get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
    { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd' } },
@@ -305,12 +304,13 @@ export default function AdminPricing() {
    { h: 'MARKET ₹', get: it => it.price.toLocaleString(), w: ['120px', '80px'], always: true, align: 'right', price: true },
    { h: 'TARGET ₹', get: it => (it.target != null ? Number(it.target).toLocaleString() : ''), w: ['110px', '76px'], align: 'right', st: { color: '#c4b5fd', fontWeight: 900 } },
    { h: 'UNIT',    get: it => it.product.unit,        w: ['70px', '46px'],  always: true, align: 'center', st: { color: '#93c5fd' } },
-   { h: 'EX',      get: it => it.ex,                  w: ['70px', '60px'],  align: 'center' },
+   { h: 'EX',      get: it => it.ex,                  w: ['92px', '60px'],  align: 'center' },
    { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
   ];
   const cols2 = DEF2; // Board 2 always shows every column (empty values show as —)
-  const COLS = cols2.map(d => d.w[twoCols ? 1 : 0]).join(' ');
-  const FS = twoCols ? 12 : 14;
+  const FS = Math.max(11, Math.min(18, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height (no wasted space)
+  // fixed (px) columns grow with the text size so big-screen text still fits
+  const COLS = cols2.map(d => { const w = d.w[twoCols ? 1 : 0]; return w.endsWith('px') ? `${Math.round(parseFloat(w) * Math.max(1, FS / 14))}px` : w; }).join(' ');
   const mono = "'Consolas','Roboto Mono','Courier New',monospace";
   const cell = { whiteSpace: 'nowrap', overflow: 'hidden', padding: twoCols ? '0 5px' : '0 8px' };
   // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
@@ -326,13 +326,13 @@ export default function AdminPricing() {
      onExit={() => setTv2Mode(false)} />
 
     {/* Board panels */}
-    <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '10px 10px', minHeight: 0 }}>
+    <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '4px 6px', minHeight: 0 }}>
      {rows2.length === 0 ? (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fcd34d', fontFamily: mono, fontSize: 24, fontWeight: 800, letterSpacing: 2 }}>NO PRICES AVAILABLE</div>
      ) : panels.map((pRows, pi) => (
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
-       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: twoCols ? 11 : 12.5, letterSpacing: twoCols ? 0.5 : 1, fontFamily: mono }}>
+       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono }}>
         {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.align || 'left' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
@@ -358,7 +358,7 @@ export default function AdminPricing() {
 
     {/* Ticker (same as Price Board 1) */}
     <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '11px 14px', zIndex: 1 }}>● LIVE</span>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
      <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} /></div>
     </div>
 
