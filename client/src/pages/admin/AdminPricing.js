@@ -366,11 +366,11 @@ export default function AdminPricing() {
   // Column definitions — Board 2 shows all of them
   const DEF2 = [
    { h: 'SR NO.',  get: (it, n) => n, w: ['80px', '60px'], always: true, align: 'center', st: { color: '#fcd34d', fontWeight: 900 } },
-   { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,3.2fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 900 } },
-   { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a' } },
-   { h: 'ORIGIN',  get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true },
-   { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd' } },
-   { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc' } },
+   { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,3.2fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 400 } },
+   { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a', fontWeight: 400 } },
+   { h: 'ORIGIN',  get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true, st: { fontWeight: 400 } },
+   { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd', fontWeight: 400 } },
+   { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc', fontWeight: 400 } },
    { h: 'PACK',    get: it => it.product.itemPackage, w: ['100px', '60px'], wrap: true, st: { color: '#a7f3d0' } },
    { h: 'COST ₹',   get: it => (it.cost != null ? Number(it.cost).toLocaleString() : ''),     w: ['110px', '76px'], align: 'right', st: { color: '#cbd5e1' } },
    { h: 'MARKET ₹', get: it => it.price.toLocaleString(), w: ['120px', '80px'], always: true, align: 'right', price: true },
@@ -487,10 +487,10 @@ export default function AdminPricing() {
   const HEAD_H = 32, ROW_H = 28, ROW_H2L = 40;   // row grows to 2 lines when text needs it
   // Card columns — each card shows only the ones it has data for
   const DEF1 = [
-   { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 800, color: '#0f1f3d' } },
-   { h: 'ORIGIN', get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569' } },
-   { h: 'GRADE',  get: it => it.product.grade,       w: 'minmax(0,1fr)',   st: { color: '#6d28d9' } },
-   { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1' } },
+   { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 400, color: '#0f1f3d' } },
+   { h: 'ORIGIN', get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569', fontWeight: 400 } },
+   { h: 'GRADE',  get: it => it.product.grade,       w: 'minmax(0,1fr)',   st: { color: '#6d28d9', fontWeight: 400 } },
+   { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1', fontWeight: 400 } },
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
    { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
   ];
@@ -499,13 +499,13 @@ export default function AdminPricing() {
   const GRID_COLS = 4, GRID_ROWS = 3;
   const mctx = document.createElement('canvas').getContext('2d');
   const tw = (t, font, ls = 0) => { mctx.font = font; const str = String(t ?? ''); return Math.ceil(mctx.measureText(str).width + ls * str.length); };
-  const F_ROW = "700 12px 'Segoe UI', sans-serif", F_MAKE = "800 13.5px 'Segoe UI', sans-serif", F_HDR = "800 9.5px 'Segoe UI', sans-serif";
+  const F_HDR = "800 9.5px 'Segoe UI', sans-serif";
   const F_SMALLP = "800 13px 'Segoe UI', sans-serif", F_BIGP = "900 18px 'Segoe UI', sans-serif";
   const CGAP = 6, UNIT_W = 38, DATE_W = 52;
   const hdrW = h => tw(h, F_HDR, 0.6);
   const maxOf = (arr, f) => arr.reduce((m, x) => Math.max(m, f(x)), 0);
   const txt = (d, it) => properCase(String(d.get(it) || '—'));
-  const fnt = d => (d.h === 'MAKE' ? F_MAKE : F_ROW);
+  const fnt = d => `${d.st?.fontWeight || 700} ${d.h === 'MAKE' ? 13.5 : 12}px 'Segoe UI', sans-serif`;
   const CARD_PAD = 7;   // left/right padding inside a card row
   const cardW = (window.innerWidth - 20 - GAP * (GRID_COLS - 1)) / GRID_COLS - 2;
   const cellH = Math.floor((availH - GAP * (GRID_ROWS - 1)) / GRID_ROWS);
@@ -603,7 +603,7 @@ export default function AdminPricing() {
            <div key={key} style={{ background: '#ffffff', borderRadius: 10, overflow: 'hidden', boxShadow: '0 6px 18px rgba(0,0,0,0.30)', height: cellH, minWidth: 0 }}>
             {/* Header */}
             <div style={{ height: HEAD_H, background: 'linear-gradient(90deg, #0b3f8c, #1d6fd1)', padding: '0 11px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-             <span style={{ fontWeight: 800, color: '#fff', fontSize: 13, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{properCase(group)}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
+             <span style={{ fontWeight: 400, color: '#fff', fontSize: 14, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={group}>{properCase(group)}{part && <span style={{ color: '#bae6fd', fontWeight: 700, marginLeft: 6 }}>({part})</span>}</span>
              <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 6 }}>
               {L.oneDate && <span style={{ fontSize: 11, color: '#fde68a', fontWeight: 800, whiteSpace: 'nowrap' }}>{L.oneDate}</span>}
               <span style={{ fontSize: 11, color: '#0b3f8c', background: '#bae6fd', padding: '1px 8px', borderRadius: 99, fontWeight: 800 }}>{total}</span>
