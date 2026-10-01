@@ -10,18 +10,69 @@ const fmtDate = (d) => {
  return dt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); // "07 Sep"
 };
 
-/* ── Live clock ── */
-function LiveClock() {
+/* ── Shared TV top bar (Price Board 1 & 2): compact, same info ── */
+function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, progressPct, onPrev, onNext, onExit }) {
  const [now, setNow] = useState(new Date());
  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
+ const glass = { background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 99 };
+ const sep = <span style={{ width: 1, height: 16, background: 'rgba(255,255,255,0.22)' }} />;
+ const navB = { width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 15, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 };
  return (
-  <div style={{ textAlign: 'right', color: 'rgba(255,255,255,0.9)' }}>
-   <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: 2, fontVariantNumeric: 'tabular-nums' }}>
-    {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+  <div style={{ height, flexShrink: 0, position: 'relative', background: 'linear-gradient(90deg, #08234f 0%, #0b3f8c 50%, #0f5fae 100%)', boxShadow: '0 4px 16px rgba(0,0,0,0.35), inset 0 -1px 0 rgba(255,255,255,0.08)' }}>
+   <div style={{ height: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '0 16px' }}>
+    {/* brand */}
+    <div style={{ width: 38, height: 38, flexShrink: 0, background: '#fff', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(0,0,0,0.3)' }}>
+     <img src="/logo.png" alt="Lok Chemicals" style={{ width: 31, height: 'auto' }} />
+    </div>
+    <div style={{ lineHeight: 1.1, minWidth: 0 }}>
+     <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: 0.3, whiteSpace: 'nowrap' }}>Live Product Prices</div>
+     <div style={{ fontSize: 9.5, fontWeight: 800, color: '#7dd3fc', letterSpacing: 2.2 }}>LOK CHEMICALS</div>
+    </div>
+
+    {/* status pill: date · live · refresh */}
+    <div style={{ ...glass, display: 'flex', alignItems: 'center', gap: 10, padding: '5px 12px', marginLeft: 6, fontSize: 12, fontWeight: 700, color: '#e0f2fe', whiteSpace: 'nowrap' }}>
+     <span>{date}</span>{sep}
+     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#4ade80', fontWeight: 900 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 99, background: '#4ade80', boxShadow: '0 0 8px #4ade80', animation: 'tvpulse 1.4s infinite' }} />{live} LIVE
+     </span>{sep}
+     <span style={{ color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontVariantNumeric: 'tabular-nums' }}>↻ {countdown}s</span>
+    </div>
+
+    <div style={{ flex: 1 }} />
+
+    {/* page control (only when there is more than one page) */}
+    {pages > 1 && (
+     <div style={{ ...glass, display: 'flex', alignItems: 'center', gap: 8, padding: '4px 6px', whiteSpace: 'nowrap' }}>
+      <button onClick={onPrev} style={navB} aria-label="Previous page">‹</button>
+      <span style={{ fontSize: 12.5, color: '#fff', fontWeight: 800, fontVariantNumeric: 'tabular-nums' }}>{page + 1} / {pages}</span>
+      <button onClick={onNext} style={navB} aria-label="Next page">›</button>
+      <span style={{ fontSize: 11, color: '#fcd34d', fontWeight: 900, minWidth: 24, textAlign: 'right', paddingRight: 4, fontVariantNumeric: 'tabular-nums' }}>{pageCountdown}s</span>
+     </div>
+    )}
+
+    {/* clock */}
+    <div style={{ textAlign: 'right', lineHeight: 1.05, whiteSpace: 'nowrap' }}>
+     <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 1, fontVariantNumeric: 'tabular-nums' }}>
+      {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+     </div>
+     <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.65)', fontWeight: 600 }}>
+      {now.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+     </div>
+    </div>
+
+    {/* exit */}
+    <button onClick={onExit} title="Exit" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 12, fontWeight: 800, cursor: 'pointer' }}
+     onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
+     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" /></svg>
+     Exit
+    </button>
    </div>
-   <div style={{ fontSize: 11, opacity: 0.6, marginTop: 2 }}>
-    {now.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+   {/* page progress line */}
+   <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
+    {progressPct != null && <div style={{ height: '100%', width: `${progressPct}%`, background: 'linear-gradient(90deg,#38bdf8,#4ade80,#fcd34d)', transition: 'width 1s linear' }} />}
    </div>
+   <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
   </div>
  );
 }
@@ -230,7 +281,7 @@ export default function AdminPricing() {
    .filter(i => i.price !== null)
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
-  const HDR_H = 70, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
+  const HDR_H = 56, COLHDR_H = 34, FOOT_H = 34, PANEL_GAP = 12;
   const TICK_H = 40;
   const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 24;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
@@ -269,36 +320,12 @@ export default function AdminPricing() {
 
   return (
    <div style={{ position: 'fixed', inset: 0, background: '#04122b', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-    {/* Header — same style as Price Board 1 */}
-    <div style={{ height: HDR_H, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0b3f8c 60%, #1d6fd1)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', position: 'relative' }}>
-     <div style={{ height: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-       <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
-        <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
-       </div>
-       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4, lineHeight: 1.1 }}>
-         Live Product Prices <span style={{ fontSize: 13, fontWeight: 700, color: '#7dd3fc', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 5 }}>
-         <span style={{ fontSize: 12, color: '#e0f2fe', background: 'rgba(255,255,255,0.12)', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>{date}</span>
-         <span style={{ fontSize: 12, color: '#052e16', background: '#4ade80', padding: '2px 10px', borderRadius: 99, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 7, height: 7, borderRadius: 99, background: '#052e16', animation: 'tvpulse 1.4s infinite' }} />{rows2.length} LIVE
-         </span>
-         <span style={{ fontSize: 12, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontWeight: 600 }}>↻ {countdown}s</span>
-        </div>
-       </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-       <LiveClock />
-       <button onClick={() => setTv2Mode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
-      </div>
-     </div>
-     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
-      {pages2 > 1 && <div style={{ height: '100%', background: 'linear-gradient(90deg,#38bdf8,#fcd34d)', width: `${((TV2_PAGE_SEC - tv2Countdown) / TV2_PAGE_SEC) * 100}%`, transition: 'width 1s linear' }} />}
-     </div>
-     <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
-    </div>
+    <TvTopBar height={HDR_H} date={date} live={rows2.length} countdown={countdown}
+     page={cur2} pages={pages2} pageCountdown={tv2Countdown}
+     progressPct={pages2 > 1 ? ((TV2_PAGE_SEC - tv2Countdown) / TV2_PAGE_SEC) * 100 : null}
+     onPrev={() => { setTv2Page(p => (p - 1 + pages2) % pages2); setTv2Countdown(TV2_PAGE_SEC); }}
+     onNext={() => { setTv2Page(p => (p + 1) % pages2); setTv2Countdown(TV2_PAGE_SEC); }}
+     onExit={() => setTv2Mode(false)} />
 
     {/* Board panels */}
     <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '10px 10px', minHeight: 0 }}>
@@ -366,7 +393,7 @@ export default function AdminPricing() {
 
   // Fixed 5 columns × 3 rows
   const GAP = 8;
-  const TOP_BAR_H = 70;
+  const TOP_BAR_H = 56;
   const TICKER_H  = 40;
   const DOTS_H    = 24;
   const PAD_V     = 16;
@@ -457,49 +484,15 @@ export default function AdminPricing() {
   const pageCards1 = pages[curPage] || [];
   const progressPct = ((TV_PAGE_SEC - tvCountdown) / TV_PAGE_SEC) * 100;
   const liveCount = latestItems.filter(i => i.price !== null).length;
-  const navBtn = { width: 32, height: 32, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', color: '#fff', fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' };
 
   return (
    <div style={{ position: 'fixed', inset: 0, background: 'radial-gradient(ellipse at top, #123a78 0%, #0a1f45 60%, #07162f 100%)', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
 
-    {/* ── Top bar ── */}
-    <div style={{ height: TOP_BAR_H, flexShrink: 0, background: 'linear-gradient(90deg, #0a2a5e, #0b3f8c 60%, #1d6fd1)', boxShadow: '0 4px 18px rgba(0,0,0,0.35)', position: 'relative' }}>
-     <div style={{ height: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-       <div style={{ width: 48, height: 48, background: '#fff', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }}>
-        <img src="/logo.png" alt="Lok Chemicals" style={{ width: 40, height: 'auto' }} />
-       </div>
-       <div>
-        <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: 0.4, lineHeight: 1.1 }}>
-         Live Product Prices <span style={{ fontSize: 13, fontWeight: 700, color: '#7dd3fc', marginLeft: 6, letterSpacing: 1 }}>LOK CHEMICALS</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 5 }}>
-         <span style={{ fontSize: 12, color: '#e0f2fe', background: 'rgba(255,255,255,0.12)', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>{date}</span>
-         <span style={{ fontSize: 12, color: '#052e16', background: '#4ade80', padding: '2px 10px', borderRadius: 99, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-          <span style={{ width: 7, height: 7, borderRadius: 99, background: '#052e16', animation: 'tvpulse 1.4s infinite' }} />{liveCount} LIVE
-         </span>
-         <span style={{ fontSize: 12, color: countdown <= 3 ? '#fecaca' : '#bae6fd', fontWeight: 600 }}>↻ {countdown}s</span>
-        </div>
-       </div>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-       {totalPages > 1 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(0,0,0,0.18)', padding: '5px 10px', borderRadius: 99 }}>
-         <button onClick={() => { setTvPage(p => (p - 1 + totalPages) % totalPages); setTvCountdown(TV_PAGE_SEC); }} style={navBtn}>‹</button>
-         <span style={{ fontSize: 14, color: '#fff', fontWeight: 700, minWidth: 54, textAlign: 'center' }}>Page {curPage + 1}/{totalPages}</span>
-         <button onClick={() => { setTvPage(p => (p + 1) % totalPages); setTvCountdown(TV_PAGE_SEC); }} style={navBtn}>›</button>
-         <span style={{ fontSize: 12, color: '#fcd34d', fontWeight: 800, minWidth: 26 }}>{tvCountdown}s</span>
-        </div>
-       )}
-       <LiveClock />
-       <button onClick={() => setTvMode(false)} style={{ padding: '8px 18px', background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: 8, fontSize: 13, cursor: 'pointer', fontWeight: 700 }}>✕ Exit</button>
-      </div>
-     </div>
-     {/* Page progress */}
-     <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 3, background: 'rgba(255,255,255,0.08)' }}>
-      {totalPages > 1 && <div style={{ height: '100%', background: 'linear-gradient(90deg,#38bdf8,#fcd34d)', width: `${progressPct}%`, transition: 'width 1s linear' }} />}
-     </div>
-    </div>
+    <TvTopBar height={TOP_BAR_H} date={date} live={liveCount} countdown={countdown}
+     page={curPage} pages={totalPages} pageCountdown={tvCountdown} progressPct={progressPct}
+     onPrev={() => { setTvPage(p => (p - 1 + totalPages) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
+     onNext={() => { setTvPage(p => (p + 1) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
+     onExit={() => setTvMode(false)} />
 
     {/* ── 5 × 3 Grid ── */}
     <div style={{ flex: 1, padding: `${PAD_V / 2}px 10px`, minHeight: 0 }}>
