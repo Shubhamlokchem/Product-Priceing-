@@ -131,6 +131,7 @@ function GroupRow({ group, groupItems }) {
      <polyline points="9 18 15 12 9 6"/>
     </svg>
     <span style={{ fontWeight: 700, color: '#1a3a6b', fontSize: 13 }}>{group}</span>
+    {groupItems.some(i => i.product?.starred) && <span title="Priority product (starred in Manage Products)" style={{ display: 'inline-flex' }}><svg width="13" height="13" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" style={{ flexShrink: 0 }}><polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.2 21 12 17.3 5.8 21 7.2 14 2 9.3 8.9 8.6 12 2" /></svg></span>}
     <span style={{ fontSize: 11, color: '#9ca3af', background: '#f3f4f6', padding: '2px 7px', borderRadius: 999 }}>{groupItems.length}</span>
     <span style={{ fontSize: 11, fontWeight: 600, color: priced > 0 ? '#16a34a' : '#d1d5db', marginLeft: 2 }}>
      {priced}/{groupItems.length} priced
@@ -161,7 +162,12 @@ function GroupRow({ group, groupItems }) {
       <tbody>
        {groupItems.map(item => (
         <tr key={item.product._id} style={{ background: item.price !== null ? undefined : '#fafafa', verticalAlign: 'middle' }}>
-         <td style={{ verticalAlign: 'middle' }}>{item.product.make || '—'}</td>
+         <td style={{ verticalAlign: 'middle' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+           {item.product.starred && <span title="Priority" style={{ display: 'inline-flex' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" strokeWidth="2" strokeLinejoin="round" style={{ flexShrink: 0 }}><polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.2 21 12 17.3 5.8 21 7.2 14 2 9.3 8.9 8.6 12 2" /></svg></span>}
+           {item.product.make || '—'}
+          </span>
+         </td>
          <td style={{ verticalAlign: 'middle' }}>{item.product.coo || '—'}</td>
          <td style={{ verticalAlign: 'middle' }}>{item.product.grade || '—'}</td>
          <td style={{ verticalAlign: 'middle' }}>{item.product.purity || '—'}</td>
