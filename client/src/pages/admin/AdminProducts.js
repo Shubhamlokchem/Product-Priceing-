@@ -806,7 +806,7 @@ export default function AdminProducts() {
        placeholder="Market ₹" type="number" min="0" step="0.01"
        style={{ padding: '6px 9px', border: '1.5px solid #f59e0b', borderRadius: 7, fontSize: 12, width: 90, background: '#fffbeb' }} />
       <input value={addForm.target} onChange={e => setAddForm(f => ({ ...f, target: e.target.value }))}
-       placeholder={defaultTarget(addForm.price) ? `Target ${defaultTarget(addForm.price)}` : 'Target ₹'} type="text" className="target-input" title="Target range. Leave empty for automatic: market +20% to +50%"
+       placeholder={defaultTarget(addForm.price) ? `Target ${defaultTarget(addForm.price)}` : 'Target ₹'} type="text" className="target-input" title="Target range. Leave empty for automatic: market +₹2 to +₹5"
        style={{ padding: '6px 9px', border: '1.5px solid #c4b5fd', borderRadius: 7, fontSize: 12, width: 110 }} />
       {/* Notes (optional) */}
       <input value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
@@ -961,7 +961,7 @@ export default function AdminProducts() {
  <input type="text" inputMode="decimal" className="price-input target-input"
   placeholder={defaultTarget(priceMap[p._id]?.price) || '—'}
   value={priceMap[p._id]?.target ?? ''}
-  title={priceMap[p._id]?.target ? 'Target range (edited). Clear the box to go back to the automatic range.' : 'Automatic target range: market +20% to +50%. Type to change, e.g. 12 - 15'}
+  title={priceMap[p._id]?.target ? 'Target range (edited). Clear the box to go back to the automatic range.' : 'Automatic target range: market +₹2 to +₹5. Type to change, e.g. 12 - 15'}
   style={{ minWidth: 124, borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
   onFocus={e => { if (!priceMap[p._id]?.target && defaultTarget(priceMap[p._id]?.price)) { handlePrice(p._id, 'target', defaultTarget(priceMap[p._id]?.price)); setTimeout(() => e.target.select(), 0); } }}
   onChange={e => handlePrice(p._id, 'target', e.target.value)} />
@@ -1054,7 +1054,7 @@ export default function AdminProducts() {
              style={{ width: 80, padding: '4px 6px', border: '1.5px solid #f59e0b', borderRadius: 6, fontSize: 12, background: '#fffbeb' }} />
            </td>
            <td>
-            <input type="text" className="target-input" placeholder={defaultTarget(inlineForm.price) || 'Target ₹'} title="Target range. Leave empty for automatic: market +20% to +50%" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
+            <input type="text" className="target-input" placeholder={defaultTarget(inlineForm.price) || 'Target ₹'} title="Target range. Leave empty for automatic: market +₹2 to +₹5" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
              style={{ width: 92, padding: '4px 6px', border: '1.5px solid #c4b5fd', borderRadius: 6, fontSize: 12 }} />
            </td>
            <td>

@@ -2,7 +2,7 @@ import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
-// Target shown everywhere: saved range if the admin typed one, otherwise market +20% to +50%
+// Target shown everywhere: saved range if the admin typed one, otherwise market +₹2 to +₹5
 const tgtOf = it => targetText(it.target, it.targetMax, it.price);
 
 const REFRESH_SEC = 7;
@@ -121,7 +121,7 @@ function PriceTicker({ items, notice = '' }) {
   .map(i => `★ ${properCase(i.product.group)}${i.product.make ? ' · ' + properCase(i.product.make) : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
  const parts = [...notes, ...starred];
  const SEP = '   •   ';
- const PRIORITY_LABEL = 'PRIORITY PRODUCTS TODAY';
+ const PRIORITY_LABEL = 'Focus Products of the Day';
  const text = parts.length ? parts.join(SEP) + (starred.length ? PRIORITY_LABEL : '') : RIBBON_MESSAGES.join('   ✦   ');
  // One pass of the ribbon: announcements, then a bold "priority" tag in front of the starred products
  const run = !parts.length ? text : (
@@ -129,7 +129,7 @@ function PriceTicker({ items, notice = '' }) {
    {notes.join(SEP)}{notes.length && starred.length ? SEP : ''}
    {starred.length > 0 && (
     <>
-     <span style={{ display: 'inline-block', background: '#0b3f8c', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: 1.4, padding: '3px 12px', borderRadius: 4, marginRight: 12, verticalAlign: 'middle' }}>{PRIORITY_LABEL}</span>
+     <span style={{ display: 'inline-block', background: '#0b3f8c', color: '#fff', fontSize: 12.5, fontWeight: 700, letterSpacing: 0.4, padding: '3px 12px', borderRadius: 4, marginRight: 12, verticalAlign: 'middle' }}>{PRIORITY_LABEL}</span>
      {starred.join(SEP)}
     </>
    )}

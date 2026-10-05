@@ -1,8 +1,8 @@
 // Target price range helpers.
-// Default target = market + 20%  to  market + 50%   (market 10 → "12 - 15").
+// Default target = market + ₹2  to  market + ₹5, (market 60 → "62 - 65", market 70 → "72 - 75", market 50.5 → "52.5 - 55.5").
 // A target typed by the admin is stored and used instead of the default.
-export const TARGET_MIN_PCT = 20;
-export const TARGET_MAX_PCT = 50;
+export const TARGET_MIN_ADD = 2;   // rupees added to market for the low end
+export const TARGET_MAX_ADD = 5;   // rupees added to market for the high end
 
 const fmtN = n => String(Math.round(Number(n) * 100) / 100);
 const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
@@ -11,7 +11,7 @@ const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v)
 export const defaultTarget = market => {
   if (!isNum(market) || Number(market) <= 0) return '';
   const m = Number(market);
-  return `${fmtN(m * (1 + TARGET_MIN_PCT / 100))} - ${fmtN(m * (1 + TARGET_MAX_PCT / 100))}`;
+  return `${fmtN(m + TARGET_MIN_ADD)} - ${fmtN(m + TARGET_MAX_ADD)}`;
 };
 
 // Stored numbers → text ("12 - 15", or "12" when both ends are the same).
