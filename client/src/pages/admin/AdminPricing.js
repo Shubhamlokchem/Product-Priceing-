@@ -121,7 +121,7 @@ function PriceTicker({ items, notice = '' }) {
   .map(i => `★ ${properCase(i.product.group)}${i.product.make ? ' · ' + properCase(i.product.make) : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
  const parts = [...notes, ...starred];
  const SEP = '   •   ';
- const PRIORITY_LABEL = "TODAY'S PRIORITY · SELL THESE FIRST";
+ const PRIORITY_LABEL = 'PRIORITY PRODUCTS TODAY';
  const text = parts.length ? parts.join(SEP) + (starred.length ? PRIORITY_LABEL : '') : RIBBON_MESSAGES.join('   ✦   ');
  // One pass of the ribbon: announcements, then a bold "priority" tag in front of the starred products
  const run = !parts.length ? text : (
@@ -129,7 +129,7 @@ function PriceTicker({ items, notice = '' }) {
    {notes.join(SEP)}{notes.length && starred.length ? SEP : ''}
    {starred.length > 0 && (
     <>
-     <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 0.8, padding: '2px 10px', borderRadius: 99, marginRight: 10, verticalAlign: 'middle', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}>🔥 {PRIORITY_LABEL}</span>
+     <span style={{ display: 'inline-block', background: '#0b3f8c', color: '#fff', fontSize: 11, fontWeight: 700, letterSpacing: 1.4, padding: '3px 12px', borderRadius: 4, marginRight: 12, verticalAlign: 'middle' }}>{PRIORITY_LABEL}</span>
      {starred.join(SEP)}
     </>
    )}
@@ -401,7 +401,7 @@ export default function AdminPricing() {
   // If everything doesn't fit the screen width, the font shrinks a little until it does.
   const mctx2 = document.createElement('canvas').getContext('2d');
   const tw2 = (t, font, ls = 0) => { mctx2.font = font; const str = String(t ?? ''); return mctx2.measureText(str).width + ls * str.length; };
-  const PADX = twoCols ? 10 : 16;
+  const PADX = twoCols ? 10 : 30;   // breathing room between columns
   const boardW = window.innerWidth - 12 - 4;
   const needFor = fs => cols2.map(d => {
    const hdr = tw2(d.h, `900 ${Math.max(11, fs - 1.5)}px ${mono}`, 1);
@@ -417,10 +417,12 @@ export default function AdminPricing() {
   }
   // spare width goes to the text columns (product gets the most), so the board fills the screen
   const spare = Math.max(0, boardW - need.reduce((a, b) => a + b, 0));
-  const share = { PRODUCT: 3, MAKE: 1.5, ORIGIN: 1, GRADE: 1, PACK: 0.8 };
-  const shareSum = cols2.reduce((a, d) => a + (share[d.h] || 0), 0) || 1;
-  const COLS = cols2.map((d, i) => `${Math.floor(need[i] + spare * (share[d.h] || 0) / shareSum)}px`).join(' ');
-  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 8px' };
+  // spare width is spread over every column (product gets the most) so columns sit evenly apart
+  const share = { PRODUCT: 3, MAKE: 1.5, 'SR NO.': 0.3 };
+  const shareOf = d => share[d.h] ?? 1;
+  const shareSum = cols2.reduce((a, d) => a + shareOf(d), 0) || 1;
+  const COLS = cols2.map((d, i) => `${Math.floor(need[i] + spare * shareOf(d) / shareSum)}px`).join(' ');
+  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 12px' };
   // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
   const wrap = twoCols ? { whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' } : {};
 
@@ -441,7 +443,7 @@ export default function AdminPricing() {
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
        <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
-        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: 'center' }}>{d.h}</div>)}
+        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.h === 'PRODUCT' ? 'left' : 'center' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
        {pRows.map((it, ri) => {
@@ -451,7 +453,7 @@ export default function AdminPricing() {
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 400, color: '#e0f2fe', fontVariantNumeric: 'tabular-nums' }}>
           {cols2.map(d => (
            <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
-            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: 'center', ...(d.st || {}),
+            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.h === 'PRODUCT' ? 'left' : 'center', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 400, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
             {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}

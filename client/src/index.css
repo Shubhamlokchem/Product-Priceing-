@@ -26,3 +26,8 @@ a { text-decoration: none; color: inherit; }
 
 /* Target range box: the automatic range shows as a clearly visible hint until the admin types their own */
 .price-input.target-input::placeholder, .target-input::placeholder { color: #7c3aed; opacity: 0.8; }
+
+/* Manage Products table: centred like the price boards */
+.mp-table th, .mp-table td { text-align: center; }
+.mp-table td input:not([type="checkbox"]), .mp-table td .price-input { text-align: center; }
+.mp-table td input[placeholder="Note"] { text-align: left; }

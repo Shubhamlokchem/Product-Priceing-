@@ -14,10 +14,12 @@ export const defaultTarget = market => {
   return `${fmtN(m * (1 + TARGET_MIN_PCT / 100))} - ${fmtN(m * (1 + TARGET_MAX_PCT / 100))}`;
 };
 
-// Stored numbers → text ("12 - 15", or "12" when there is only one number)
+// Stored numbers → text ("12 - 15", or "12" when both ends are the same).
+// Old single targets saved before ranges existed (no upper end) are ignored,
+// so those products show the automatic range from their market price.
 export const storedTargetText = (target, targetMax) => {
-  if (!isNum(target)) return '';
-  return isNum(targetMax) && Number(targetMax) !== Number(target) ? `${fmtN(target)} - ${fmtN(targetMax)}` : fmtN(target);
+  if (!isNum(target) || !isNum(targetMax)) return '';
+  return Number(targetMax) !== Number(target) ? `${fmtN(target)} - ${fmtN(targetMax)}` : fmtN(target);
 };
 
 // What to show: the saved target if there is one, otherwise the default from market
@@ -30,5 +32,5 @@ export const parseTarget = (text, market) => {
   if (!nums.length) return { target: null, targetMax: null };
   const lo = Math.min(nums[0], nums[1] ?? nums[0]), hi = Math.max(nums[0], nums[1] ?? nums[0]);
   if (storedTargetText(lo, hi) === defaultTarget(market)) return { target: null, targetMax: null };
-  return { target: lo, targetMax: hi === lo ? null : hi };
+  return { target: lo, targetMax: hi };
 };

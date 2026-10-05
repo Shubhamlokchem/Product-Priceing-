@@ -862,17 +862,28 @@ export default function AdminProducts() {
 
  {isOpen && (
  <div className="table-wrap">
- <table>
+ <table className="mp-table">
  <thead>
  <tr>
  <th style={{ width: 32, padding: '8px 6px' }} />
- <th>Make</th><th>Origin</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
- <th style={{ color: '#64748b', whiteSpace: 'nowrap' }}>Cost (₹)</th><th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>EX</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Updated</th><th style={{ width: 120 }}>Actions</th>
+ <th>Make</th><th>Origin</th><th>EX</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
+ <th style={{ color: '#64748b', whiteSpace: 'nowrap' }}>Cost (₹)</th><th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Last Update</th><th style={{ width: 120 }}>Actions</th>
  </tr>
  </thead>
  <tbody>
  {items.map(p => {
  const isEditing = editingId === p._id;
+ // EX location — always editable (sits right after Origin)
+ const exCell = (
+ <td>
+ <select value={priceMap[p._id]?.ex ?? ''}
+  onChange={e => handlePrice(p._id, 'ex', e.target.value)}
+  style={{ padding: '4px 6px', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: 12, minWidth: 90, background: priceMap[p._id]?.ex ? '#f0f5ff' : '#fff', color: priceMap[p._id]?.ex ? '#1a3a6b' : '#9ca3af' }}>
+  <option value="">EX…</option>
+  {EX_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+ </select>
+ </td>
+ );
  const ev = editMap[p._id] || {};
  return (
  <tr key={p._id} style={{ background: isEditing ? '#fffbeb' : selectedProducts.has(p._id) ? '#f0f5ff' : undefined }}>
@@ -890,6 +901,7 @@ export default function AdminProducts() {
  style={{ width: 90, padding: '4px 6px', border: '1.5px solid #2558a8', borderRadius: 6, fontSize: 12 }} /></td>
  <td><input value={ev.coo ?? p.coo} onChange={e => handleEdit(p._id, 'coo', e.target.value)}
  style={{ width: 70, padding: '4px 6px', border: '1.5px solid #2558a8', borderRadius: 6, fontSize: 12 }} /></td>
+ {exCell}
  <td><input value={ev.grade ?? p.grade} onChange={e => handleEdit(p._id, 'grade', e.target.value)}
  style={{ width: 60, padding: '4px 6px', border: '1.5px solid #2558a8', borderRadius: 6, fontSize: 12 }} /></td>
  <td><input value={ev.purity ?? p.purity} onChange={e => handleEdit(p._id, 'purity', e.target.value)}
@@ -907,6 +919,7 @@ export default function AdminProducts() {
  <>
  <td>{p.make || '—'}</td>
  <td>{p.coo || '—'}</td>
+ {exCell}
  <td>{p.grade || '—'}</td>
  <td>{p.purity || '—'}</td>
  <td style={{ fontSize: 11 }}>{p.itemPackage || '—'}</td>
@@ -949,18 +962,9 @@ export default function AdminProducts() {
   placeholder={defaultTarget(priceMap[p._id]?.price) || '—'}
   value={priceMap[p._id]?.target ?? ''}
   title={priceMap[p._id]?.target ? 'Target range (edited). Clear the box to go back to the automatic range.' : 'Automatic target range: market +20% to +50%. Type to change, e.g. 12 - 15'}
-  style={{ minWidth: 92, borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
+  style={{ minWidth: 124, borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
   onFocus={e => { if (!priceMap[p._id]?.target && defaultTarget(priceMap[p._id]?.price)) { handlePrice(p._id, 'target', defaultTarget(priceMap[p._id]?.price)); setTimeout(() => e.target.select(), 0); } }}
   onChange={e => handlePrice(p._id, 'target', e.target.value)} />
- </td>
- {/* EX location — always editable */}
- <td>
- <select value={priceMap[p._id]?.ex ?? ''}
-  onChange={e => handlePrice(p._id, 'ex', e.target.value)}
-  style={{ padding: '4px 6px', border: '1.5px solid #e5e7eb', borderRadius: 6, fontSize: 12, minWidth: 90, background: priceMap[p._id]?.ex ? '#f0f5ff' : '#fff', color: priceMap[p._id]?.ex ? '#1a3a6b' : '#9ca3af' }}>
-  <option value="">EX…</option>
-  {EX_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
- </select>
  </td>
  {/* Notes — always editable */}
  <td>
@@ -1014,6 +1018,13 @@ export default function AdminProducts() {
             <datalist id={`dl-coo-${group}`}>{[...new Set(items.map(p=>p.coo).filter(Boolean))].map(v=><option key={v} value={v}/>)}</datalist>
            </td>
            <td>
+            <select value={inlineForm.ex || ''} onChange={e => setInlineForm(f => ({ ...f, ex: e.target.value }))}
+             style={{ padding: '4px 6px', border: '1.5px solid #16a34a', borderRadius: 6, fontSize: 12, minWidth: 90 }}>
+             <option value="">EX…</option>
+             {EX_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+            </select>
+           </td>
+           <td>
             <input list={`dl-grade-${group}`} placeholder="Grade" value={inlineForm.grade} onChange={e => setInlineForm(f => ({ ...f, grade: e.target.value }))}
              style={{ width: 60, padding: '4px 6px', border: '1.5px solid #16a34a', borderRadius: 6, fontSize: 12 }} />
             <datalist id={`dl-grade-${group}`}>{[...new Set(items.map(p=>p.grade).filter(Boolean))].map(v=><option key={v} value={v}/>)}</datalist>
@@ -1045,13 +1056,6 @@ export default function AdminProducts() {
            <td>
             <input type="text" className="target-input" placeholder={defaultTarget(inlineForm.price) || 'Target ₹'} title="Target range. Leave empty for automatic: market +20% to +50%" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
              style={{ width: 92, padding: '4px 6px', border: '1.5px solid #c4b5fd', borderRadius: 6, fontSize: 12 }} />
-           </td>
-           <td>
-            <select value={inlineForm.ex || ''} onChange={e => setInlineForm(f => ({ ...f, ex: e.target.value }))}
-             style={{ padding: '4px 6px', border: '1.5px solid #16a34a', borderRadius: 6, fontSize: 12, minWidth: 90 }}>
-             <option value="">EX…</option>
-             {EX_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
-            </select>
            </td>
            <td>
             <input placeholder="Note" value={inlineForm.notes} onChange={e => setInlineForm(f => ({ ...f, notes: e.target.value }))}
