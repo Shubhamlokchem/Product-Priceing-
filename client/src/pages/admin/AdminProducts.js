@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
+import { defaultTarget, storedTargetText, parseTarget } from '../../utils/target';
 import '../Dashboard.css';
 
 const EMPTY = { group: '', make: '', coo: '', grade: '', purity: '', itemPackage: '', unit: 'kg', cost: '', price: '', target: '', notes: '', ex: '' };
@@ -118,12 +119,12 @@ export default function AdminProducts() {
  // Build latest price map for fallback display
  const latestMap = {};
  latestRes.data.forEach(e => {
-  latestMap[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: e.target ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
+  latestMap[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: storedTargetText(e.target, e.targetMax), notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
  });
 
  const pm = {}, om = {};
  priceRes.data.forEach(e => {
- pm[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: e.target ?? '', notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
+ pm[e.product._id] = { price: e.price ?? '', cost: e.cost ?? '', target: storedTargetText(e.target, e.targetMax), notes: e.notes || '', ex: e.ex || '', updatedAt: e.updatedAt || null, entryDate: e.date || null };
  om[e.product._id] = e.price;
  });
 
@@ -185,7 +186,7 @@ export default function AdminProducts() {
    productId: newProduct._id,
    price: inlineForm.price !== '' ? Number(inlineForm.price) : null,
    cost: inlineForm.cost || null,
-   target: inlineForm.target || null,
+   ...parseTarget(inlineForm.target, inlineForm.price),
    notes: inlineForm.notes || '',
    ex: inlineForm.ex || '',
    date
@@ -223,7 +224,7 @@ export default function AdminProducts() {
    productId: newProduct._id,
    price: addForm.price !== '' ? Number(addForm.price) : null,
    cost: addForm.cost || null,
-   target: addForm.target || null,
+   ...parseTarget(addForm.target, addForm.price),
    notes: addForm.notes || '',
    date
   });
@@ -252,7 +253,7 @@ export default function AdminProducts() {
  productId: p._id,
  price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null,
  cost: priceMap[p._id]?.cost ?? null,
- target: priceMap[p._id]?.target ?? null,
+ ...parseTarget(priceMap[p._id]?.target, raw),
  notes: priceMap[p._id]?.notes || '',
  ex: priceMap[p._id]?.ex || '',
  };
@@ -268,7 +269,7 @@ export default function AdminProducts() {
  const saveRowPrice = async (productId) => {
  const raw = priceMap[productId]?.price;
  try {
-  await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, cost: priceMap[productId]?.cost ?? null, target: priceMap[productId]?.target ?? null, notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
+  await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, cost: priceMap[productId]?.cost ?? null, ...parseTarget(priceMap[productId]?.target, raw), notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
   setMsg({ type: 'success', text: 'Price saved!' });
   loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Save failed' }); }
@@ -313,13 +314,13 @@ export default function AdminProducts() {
   const rows = products.map(p => {
    const e = priceMap[p._id] || {};
    return [p._id, p.group, p.make||'', p.coo||'', p.grade||'', p.purity||'', p.itemPackage||'', p.unit||'kg',
-    e.cost ?? '', e.price ?? '', e.target ?? '', e.ex || '', e.notes || ''];
+    e.cost ?? '', e.price ?? '', e.target || defaultTarget(e.price), e.ex || '', e.notes || ''];
   });
   downloadCSV(headers, rows, `products-${date}.csv`);
  };
 
  const downloadSampleCSV = () => {
-  const sample = `group,make,origin,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,120\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
+  const sample = `group,make,origin,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,130 - 160\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
   const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
  };
 
@@ -372,7 +373,13 @@ export default function AdminProducts() {
    const seenNew = new Set(), seenIds = new Set();
    rows.forEach(row => {
     const prod = (row.id && byId[row.id]) || byKey[keyOf(row)];
-    const nums = { cost: toNum(row.cost), price: toNum(row.market ?? row.price), target: toNum(row.target) };
+    const nums = { cost: toNum(row.cost), price: toNum(row.market ?? row.price), target: null };
+    // target can be a range ("12 - 15") or one number; blank = no change; same as the default = automatic
+    if (String(row.target ?? '').trim()) {
+     const mkt = nums.price ?? (prod ? priceMap[prod._id]?.price : null);
+     const t = parseTarget(row.target, mkt);
+     nums.target = storedTargetText(t.target, t.targetMax);
+    }
     if (!prod) {
      const k = keyOf(row);
      if (seenNew.has(k)) { duplicates.push(row); return; }
@@ -385,9 +392,10 @@ export default function AdminProducts() {
     const changes = [];
     const newUnit = (row.unit || '').trim();
     if (newUnit && norm(newUnit) !== norm(prod.unit)) changes.push({ f: 'Unit', from: prod.unit, to: newUnit });
-    [['cost','Cost'],['price','Market'],['target','Target']].forEach(([k, label]) => {
+    [['cost','Cost'],['price','Market']].forEach(([k, label]) => {
      if (nums[k] !== null && !sameNum(cur[k], nums[k])) changes.push({ f: label, from: cur[k] === '' || cur[k] == null ? '—' : cur[k], to: nums[k] });
     });
+    if (nums.target !== null && nums.target !== (cur.target || '')) changes.push({ f: 'Target', from: cur.target || 'Auto', to: nums.target || 'Auto' });
     if (row.ex && row.ex !== (cur.ex || '')) changes.push({ f: 'EX', from: cur.ex || '—', to: row.ex });
     if (row.notes && row.notes !== (cur.notes || '')) changes.push({ f: 'Notes', from: cur.notes || '—', to: row.notes });
     if (changes.length) updates.push({ row, prod, nums, newUnit, changes });
@@ -417,7 +425,7 @@ export default function AdminProducts() {
      itemPackage: row.package||row.itempackage||'', unit: row.unit||'kg',
     });
     if (row.price !== null || row.cost !== null || row.target !== null)
-     bulk.push({ productId: np._id, price: row.price, cost: row.cost, target: row.target, ex: row.ex || '', notes: row.notes || '' });
+     bulk.push({ productId: np._id, price: row.price, cost: row.cost, ...parseTarget(row.target, row.price), ex: row.ex || '', notes: row.notes || '' });
     ok++;
    } catch { failed++; }
    tick();
@@ -433,7 +441,7 @@ export default function AdminProducts() {
      productId: u.prod._id,
      price:  u.nums.price  ?? keep(cur.price),
      cost:   u.nums.cost   ?? keep(cur.cost),
-     target: u.nums.target ?? keep(cur.target),
+     ...parseTarget(u.nums.target ?? cur.target, u.nums.price ?? cur.price),
      ex: u.row.ex || cur.ex || '', notes: u.row.notes || cur.notes || '',
     });
     ok++;
@@ -798,8 +806,8 @@ export default function AdminProducts() {
        placeholder="Market ₹" type="number" min="0" step="0.01"
        style={{ padding: '6px 9px', border: '1.5px solid #f59e0b', borderRadius: 7, fontSize: 12, width: 90, background: '#fffbeb' }} />
       <input value={addForm.target} onChange={e => setAddForm(f => ({ ...f, target: e.target.value }))}
-       placeholder="Target ₹" type="number" min="0" step="0.01"
-       style={{ padding: '6px 9px', border: '1.5px solid #c4b5fd', borderRadius: 7, fontSize: 12, width: 85 }} />
+       placeholder={defaultTarget(addForm.price) ? `Target ${defaultTarget(addForm.price)}` : 'Target ₹'} type="text" className="target-input" title="Target range. Leave empty for automatic: market +20% to +50%"
+       style={{ padding: '6px 9px', border: '1.5px solid #c4b5fd', borderRadius: 7, fontSize: 12, width: 110 }} />
       {/* Notes (optional) */}
       <input value={addForm.notes} onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
        placeholder="Note"
@@ -937,9 +945,12 @@ export default function AdminProducts() {
  </td>
  {/* Target input */}
  <td>
- <input type="number" step="0.01" min="0" className="price-input" placeholder="—"
-  value={priceMap[p._id]?.target ?? ''} title="Target selling price"
-  style={{ borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
+ <input type="text" inputMode="decimal" className="price-input target-input"
+  placeholder={defaultTarget(priceMap[p._id]?.price) || '—'}
+  value={priceMap[p._id]?.target ?? ''}
+  title={priceMap[p._id]?.target ? 'Target range (edited). Clear the box to go back to the automatic range.' : 'Automatic target range: market +20% to +50%. Type to change, e.g. 12 - 15'}
+  style={{ minWidth: 92, borderColor: '#c4b5fd', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.target !== '' ? '#fffbeb' : undefined }}
+  onFocus={e => { if (!priceMap[p._id]?.target && defaultTarget(priceMap[p._id]?.price)) { handlePrice(p._id, 'target', defaultTarget(priceMap[p._id]?.price)); setTimeout(() => e.target.select(), 0); } }}
   onChange={e => handlePrice(p._id, 'target', e.target.value)} />
  </td>
  {/* EX location — always editable */}
@@ -1032,8 +1043,8 @@ export default function AdminProducts() {
              style={{ width: 80, padding: '4px 6px', border: '1.5px solid #f59e0b', borderRadius: 6, fontSize: 12, background: '#fffbeb' }} />
            </td>
            <td>
-            <input type="number" min="0" step="0.01" placeholder="Target ₹" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
-             style={{ width: 75, padding: '4px 6px', border: '1.5px solid #c4b5fd', borderRadius: 6, fontSize: 12 }} />
+            <input type="text" className="target-input" placeholder={defaultTarget(inlineForm.price) || 'Target ₹'} title="Target range. Leave empty for automatic: market +20% to +50%" value={inlineForm.target || ''} onChange={e => setInlineForm(f => ({ ...f, target: e.target.value }))}
+             style={{ width: 92, padding: '4px 6px', border: '1.5px solid #c4b5fd', borderRadius: 6, fontSize: 12 }} />
            </td>
            <td>
             <select value={inlineForm.ex || ''} onChange={e => setInlineForm(f => ({ ...f, ex: e.target.value }))}

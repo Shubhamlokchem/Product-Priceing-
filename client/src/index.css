@@ -23,3 +23,6 @@ body {
 button { cursor: pointer; border: none; outline: none; }
 input, select, textarea { outline: none; font-family: inherit; }
 a { text-decoration: none; color: inherit; }
+
+/* Target range box: the automatic range shows as a clearly visible hint until the admin types their own */
+.price-input.target-input::placeholder, .target-input::placeholder { color: #7c3aed; opacity: 0.8; }

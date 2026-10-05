@@ -4,7 +4,8 @@ const priceEntrySchema = new mongoose.Schema({
   product:   { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   price:     { type: Number, required: true },   // market price
   cost:      { type: Number, default: null },    // our cost
-  target:    { type: Number, default: null },    // target price
+  target:    { type: Number, default: null },    // target price (low end of the range)
+  targetMax: { type: Number, default: null },    // target price (high end of the range)
   currency:  { type: String, default: 'INR' },
   date:      { type: String, required: true }, // YYYY-MM-DD
   notes:     { type: String, default: '' },

@@ -1,6 +1,9 @@
 import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
+import { targetText } from '../../utils/target';
 import '../Dashboard.css';
+// Target shown everywhere: saved range if the admin typed one, otherwise market +20% to +50%
+const tgtOf = it => targetText(it.target, it.targetMax, it.price);
 
 const REFRESH_SEC = 7;
 
@@ -117,7 +120,21 @@ function PriceTicker({ items, notice = '' }) {
  const starred = items.filter(i => i.price !== null && i.product?.starred)
   .map(i => `★ ${properCase(i.product.group)}${i.product.make ? ' · ' + properCase(i.product.make) : ''} — ₹${i.price.toLocaleString()}/${i.product.unit}`);
  const parts = [...notes, ...starred];
- const text = parts.length ? parts.join('   •   ') : RIBBON_MESSAGES.join('   ✦   ');
+ const SEP = '   •   ';
+ const PRIORITY_LABEL = "TODAY'S PRIORITY · SELL THESE FIRST";
+ const text = parts.length ? parts.join(SEP) + (starred.length ? PRIORITY_LABEL : '') : RIBBON_MESSAGES.join('   ✦   ');
+ // One pass of the ribbon: announcements, then a bold "priority" tag in front of the starred products
+ const run = !parts.length ? text : (
+  <>
+   {notes.join(SEP)}{notes.length && starred.length ? SEP : ''}
+   {starred.length > 0 && (
+    <>
+     <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 0.8, padding: '2px 10px', borderRadius: 99, marginRight: 10, verticalAlign: 'middle', boxShadow: '0 1px 4px rgba(0,0,0,0.25)' }}>🔥 {PRIORITY_LABEL}</span>
+     {starred.join(SEP)}
+    </>
+   )}
+  </>
+ );
  // Constant scroll speed (pixels per second) so short and long ribbons move equally fast
  const TICKER_PX_PER_SEC = 150;
  const runRef = useRef(null);
@@ -130,7 +147,7 @@ function PriceTicker({ items, notice = '' }) {
  return (
   <div style={{ background: 'transparent', color: '#0a2a5e', padding: '9px 0', overflow: 'hidden', whiteSpace: 'nowrap', fontSize: 14, fontWeight: 800 }}>
    <div ref={runRef} style={{ display: 'inline-block', animation: `ticker ${dur.toFixed(1)}s linear infinite`, paddingLeft: '100%' }}>
-    {text}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{text}
+    {run}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{run}
    </div>
    <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
   </div>
@@ -192,7 +209,7 @@ function GroupRow({ group, groupItems }) {
           ? <span className="price-highlight">₹{item.price.toLocaleString()}<span className="currency">/{item.product.unit}</span></span>
           : <span className="no-price">—</span>}
          </td>
-         <td style={{ verticalAlign: 'middle', color: '#7c3aed', fontWeight: 600 }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : <span className="no-price">—</span>}</td>
+         <td style={{ verticalAlign: 'middle', color: '#7c3aed', fontWeight: 600 }}>{tgtOf(item) ? <span style={{ whiteSpace: 'nowrap' }}>₹{tgtOf(item)}</span> : <span className="no-price">—</span>}</td>
          <td style={{ fontSize: 11, color: '#6b7280', verticalAlign: 'middle' }}>{item.notes || '—'}</td>
          <td style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap', fontWeight: 600, verticalAlign: 'middle', textAlign: 'center' }}>{fmtDate(item.updatedAt || item.date) || '—'}</td>
         </tr>
@@ -314,7 +331,7 @@ export default function AdminPricing() {
    .map(i => [
     i.product.group, i.product.make||'', i.product.coo||'', i.product.grade||'',
     i.product.purity||'', i.product.itemPackage||'', i.product.unit||'',
-    i.cost ?? '', i.price, i.target ?? '', i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
+    i.cost ?? '', i.price, tgtOf(i), i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
    ]);
   const lines = [headers, ...rows].map(r =>
    r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
@@ -369,15 +386,14 @@ export default function AdminPricing() {
    { h: 'PRODUCT', get: it => it.product.group,       w: ['minmax(0,3.2fr)', 'minmax(0,2.4fr)'], always: true, wrap: true, st: { color: '#fff', fontWeight: 400 } },
    { h: 'MAKE',    get: it => it.product.make,        w: ['minmax(0,1.5fr)', 'minmax(0,1.3fr)'], wrap: true, st: { color: '#fde68a', fontWeight: 400 } },
    { h: 'ORIGIN',  get: it => it.product.coo,         w: ['minmax(0,1fr)', 'minmax(0,0.9fr)'],   wrap: true, st: { fontWeight: 400 } },
+   { h: 'EX',      get: it => it.ex,                  w: ['92px', '60px'],  align: 'center' },
    { h: 'GRADE',   get: it => it.product.grade,       w: ['minmax(0,1fr)', 'minmax(0,1.1fr)'],   wrap: true, st: { color: '#c4b5fd', fontWeight: 400 } },
    { h: 'PURITY',  get: it => it.product.purity,      w: ['90px', '58px'],  st: { color: '#7dd3fc', fontWeight: 400 } },
    { h: 'PACK',    get: it => it.product.itemPackage, w: ['100px', '60px'], wrap: true, st: { color: '#a7f3d0' } },
-   { h: 'COST ₹',   get: it => (it.cost != null ? Number(it.cost).toLocaleString() : ''),     w: ['110px', '76px'], align: 'right', st: { color: '#cbd5e1' } },
    { h: 'MARKET ₹', get: it => it.price.toLocaleString(), w: ['120px', '80px'], always: true, align: 'right', price: true },
-   { h: 'TARGET ₹', get: it => (it.target != null ? Number(it.target).toLocaleString() : ''), w: ['110px', '76px'], align: 'right', st: { color: '#c4b5fd', fontWeight: 400 } },
+   { h: 'TARGET ₹', get: it => tgtOf(it), w: ['110px', '76px'], align: 'right', st: { color: '#c4b5fd', fontWeight: 400 } },
    { h: 'UNIT',    get: it => it.product.unit,        w: ['70px', '46px'],  always: true, align: 'center', st: { color: '#93c5fd' } },
-   { h: 'EX',      get: it => it.ex,                  w: ['92px', '60px'],  align: 'center' },
-   { h: 'DATE',    get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
+   { h: 'LAST UPDATE', get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
   ];
   const cols2 = DEF2; // Board 2 always shows every column (empty values show as —)
   const mono = "'Segoe UI','Inter',Arial,sans-serif";   // clean, readable TV font
@@ -425,7 +441,7 @@ export default function AdminPricing() {
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
        <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
-        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.align || 'left' }}>{d.h}</div>)}
+        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: 'center' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
        {pRows.map((it, ri) => {
@@ -435,7 +451,7 @@ export default function AdminPricing() {
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 400, color: '#e0f2fe', fontVariantNumeric: 'tabular-nums' }}>
           {cols2.map(d => (
            <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
-            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.align || 'left', ...(d.st || {}),
+            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: 'center', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 400, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
             {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}
@@ -489,10 +505,10 @@ export default function AdminPricing() {
   const DEF1 = [
    { h: 'MAKE',   get: it => it.product.make,        w: 'minmax(0,1.4fr)', st: { fontSize: 13.5, fontWeight: 400, color: '#0f1f3d' } },
    { h: 'ORIGIN', get: it => it.product.coo,         w: 'minmax(0,1fr)',   st: { color: '#475569', fontWeight: 400 } },
+   { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
    { h: 'GRADE',  get: it => it.product.grade,       w: 'minmax(0,1fr)',   st: { color: '#6d28d9', fontWeight: 400 } },
    { h: 'PURITY', get: it => it.product.purity,      w: 'minmax(0,0.9fr)', st: { color: '#0369a1', fontWeight: 400 } },
    { h: 'PACK',   get: it => it.product.itemPackage, w: 'minmax(0,1fr)',   st: { color: '#065f46' } },
-   { h: 'EX',     get: it => it.ex,                  w: 'minmax(0,0.9fr)', st: { color: '#1d4ed8' } },
   ];
   // Fixed grid: 4 columns × 3 rows of equal-size cards (12 per page).
   // Each card shows only the columns it has data for, sized to its own content.
@@ -501,7 +517,7 @@ export default function AdminPricing() {
   const tw = (t, font, ls = 0) => { mctx.font = font; const str = String(t ?? ''); return Math.ceil(mctx.measureText(str).width + ls * str.length); };
   const F_HDR = "800 9.5px 'Segoe UI', sans-serif";
   const F_SMALLP = "400 13px 'Segoe UI', sans-serif", F_BIGP = "400 18px 'Segoe UI', sans-serif";
-  const CGAP = 6, UNIT_W = 38, DATE_W = 52;
+  const CGAP = 6, UNIT_W = 38, DATE_W = 76;
   const hdrW = h => tw(h, F_HDR, 0.6);
   const maxOf = (arr, f) => arr.reduce((m, x) => Math.max(m, f(x)), 0);
   const txt = (d, it) => properCase(String(d.get(it) || '—'));
@@ -512,8 +528,8 @@ export default function AdminPricing() {
 
   const layoutFor = gItems => {
    const cols = DEF1.filter(d => gItems.some(it => d.get(it)));
-   const hasCost = gItems.some(it => it.cost != null);
-   const hasTarget = gItems.some(it => it.target != null);
+   const hasCost = false;   // cost is not shown on the TV boards
+   const hasTarget = gItems.some(it => tgtOf(it));
    const colW = cols.map(d => Math.min(200, Math.max(hdrW(d.h), maxOf(gItems, it => tw(txt(d, it), fnt(d))))) + 2);
    const costW = hasCost ? Math.max(hdrW('COST ₹'), maxOf(gItems, it => tw(it.cost != null ? `₹${Number(it.cost).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
    // Same date / same unit for the whole card → shown once (date in the card header, unit in the MARKET header)
@@ -523,7 +539,7 @@ export default function AdminPricing() {
    const oneDate = showDate ? '' : [...dateSet][0];
    const mktHdr = showUnit ? 'MARKET ₹' : `MARKET ₹/${String([...unitSet][0] || '').toUpperCase()}`;
    const mktW = Math.max(hdrW(mktHdr), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
-   const tgtW = hasTarget ? Math.max(hdrW('TARGET ₹'), maxOf(gItems, it => tw(it.target != null ? `₹${Number(it.target).toLocaleString()}` : '—', F_SMALLP))) + 2 : 0;
+   const tgtW = hasTarget ? Math.max(hdrW('TARGET ₹'), maxOf(gItems, it => tw(tgtOf(it) ? `₹${tgtOf(it)}` : '—', F_SMALLP))) + 2 : 0;
    const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + (showUnit ? 1 : 0) + (showDate ? 1 : 0);
    const fixedW = costW + mktW + tgtW + (showUnit ? UNIT_W : 0) + (showDate ? DATE_W : 0) + CGAP * (nCols - 1);
    // every text column must fit its longest single word (words never split)
@@ -611,18 +627,18 @@ export default function AdminPricing() {
             </div>
             {(() => {
              const { cols, hasCost, hasTarget, grid, colhdrH, rowH, scale, showDate, showUnit, mktHdr } = L;
-             const cellS = { minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-             const wrapS = { minWidth: 0, overflow: 'hidden', whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'normal', overflowWrap: 'normal' };
+             const cellS = { textAlign: 'center', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+             const wrapS = { textAlign: 'center', minWidth: 0, overflow: 'hidden', whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', wordBreak: 'normal', overflowWrap: 'normal' };
              return (
               <div style={{ zoom: scale }}>
                {/* Column headers (only the columns this card uses) */}
                <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: `0 ${CARD_PAD}px`, background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6, textTransform: 'uppercase' }}>
                 {cols.map(d => <span key={d.h} style={wrapS}>{d.h}</span>)}
-                {hasCost && <span style={{ ...cellS, textAlign: 'right' }}>COST ₹</span>}
-                <span style={{ ...cellS, textAlign: 'right' }}>{mktHdr}</span>
-                {hasTarget && <span style={{ ...cellS, textAlign: 'right' }}>TARGET ₹</span>}
+                {hasCost && <span style={{ ...cellS, textAlign: 'center' }}>COST ₹</span>}
+                <span style={{ ...cellS, textAlign: 'center' }}>{mktHdr}</span>
+                {hasTarget && <span style={{ ...cellS, textAlign: 'center' }}>TARGET ₹</span>}
                 {showUnit && <span style={{ ...cellS, textAlign: 'center' }}>UNIT</span>}
-                {showDate && <span style={{ ...cellS, textAlign: 'right' }}>DATE</span>}
+                {showDate && <span style={{ ...cellS, textAlign: 'center' }}>LAST UPDATE</span>}
                </div>
                {/* Rows */}
                {gItems.map((item, idx) => (
@@ -630,11 +646,11 @@ export default function AdminPricing() {
                  {cols.map(d => (
                   <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
                  ))}
-                 {hasCost && <span style={{ fontSize: 13, fontWeight: 400, color: '#475569', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
-                 <span style={{ fontSize: 18, fontWeight: 400, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'right' }}>₹{item.price.toLocaleString()}</span>
-                 {hasTarget && <span style={{ fontSize: 13, fontWeight: 400, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'right' }}>{item.target != null ? `₹${Number(item.target).toLocaleString()}` : '—'}</span>}
+                 {hasCost && <span style={{ fontSize: 13, fontWeight: 400, color: '#475569', whiteSpace: 'nowrap', textAlign: 'center' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
+                 <span style={{ fontSize: 18, fontWeight: 400, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'center' }}>₹{item.price.toLocaleString()}</span>
+                 {hasTarget && <span style={{ fontSize: 13, fontWeight: 400, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'center' }}>{tgtOf(item) ? `₹${tgtOf(item)}` : '—'}</span>}
                  {showUnit && <span style={{ fontSize: 11, fontWeight: 400, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{properCase(item.product.unit)}</span>}
-                 {showDate && <span style={{ fontSize: 11, fontWeight: 400, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'right' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>}
+                 {showDate && <span style={{ fontSize: 11, fontWeight: 400, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'center' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>}
                 </div>
                ))}
               </div>

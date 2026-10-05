@@ -4,7 +4,7 @@ const Product = require('../models/Product');
 const { protect, adminOnly } = require('../middleware/auth');
 const numOrNull = v => (v !== null && v !== undefined && v !== '' && !isNaN(v)) ? Number(v) : null;
 // Cost / target are internal — only admins receive them
-const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; delete obj.target; } return obj; };
+const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; delete obj.target; delete obj.targetMax; } return obj; };
 
 // Get latest prices for all products
 router.get('/latest', protect, async (req, res) => {
@@ -17,6 +17,7 @@ router.get('/latest', protect, async (req, res) => {
         price:     latest?.price     ?? null,
         cost:      latest?.cost      ?? null,
         target:    latest?.target    ?? null,
+        targetMax: latest?.targetMax ?? null,
         currency:  latest?.currency  ?? 'INR',
         date:      latest?.date      ?? null,
         notes:     latest?.notes     ?? '',
@@ -47,6 +48,7 @@ router.get('/date/:date', protect, async (req, res) => {
         price:     entry?.price     ?? null,
         cost:      entry?.cost      ?? null,
         target:    entry?.target    ?? null,
+        targetMax: entry?.targetMax ?? null,
         currency:  entry?.currency  ?? 'INR',
         date:      entry ? req.params.date : null,
         notes:     entry?.notes     ?? '',
@@ -177,13 +179,13 @@ router.get('/available-dates', protect, async (req, res) => {
 // Admin: Set/update single price
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
-    const { productId, price, date, currency, notes, ex, cost, target } = req.body;
+    const { productId, price, date, currency, notes, ex, cost, target, targetMax } = req.body;
     if (!productId || price === undefined || !date)
       return res.status(400).json({ message: 'productId, price and date are required' });
 
     const entry = await PriceEntry.findOneAndUpdate(
       { product: productId, date },
-      { price: numOrNull(price), cost: numOrNull(cost), target: numOrNull(target), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
+      { price: numOrNull(price), cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
       { upsert: true, new: true }
     ).populate('product');
     res.json(entry);
@@ -200,11 +202,11 @@ router.post('/bulk', protect, adminOnly, async (req, res) => {
       return res.status(400).json({ message: 'date and prices array required' });
 
     const results = await Promise.all(
-      prices.map(({ productId, price, notes, currency, ex, cost, target }) => {
+      prices.map(({ productId, price, notes, currency, ex, cost, target, targetMax }) => {
         const priceValue = (price !== null && price !== undefined && !isNaN(price)) ? price : null;
         return PriceEntry.findOneAndUpdate(
           { product: productId, date },
-          { price: priceValue, cost: numOrNull(cost), target: numOrNull(target), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
+          { price: priceValue, cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
           { upsert: true, new: true }
         );
       })
