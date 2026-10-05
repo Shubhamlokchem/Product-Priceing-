@@ -397,7 +397,8 @@ export default function AdminPricing() {
    { h: 'UNIT',    get: it => it.product.unit,        w: ['70px', '46px'],  always: true, align: 'center', st: { color: '#93c5fd' } },
    { h: 'LAST UPDATE', get: it => fmtDate(it.updatedAt || it.date), w: ['90px', '58px'], always: true, align: 'center', date: true },
   ];
-  const cols2 = DEF2; // Board 2 always shows every column (empty values show as —)
+  // A column with no data in any product is hidden (checked across the whole board, so screens stay consistent)
+  const cols2 = DEF2.filter(d => d.always || rows2.some((it, i) => { const v = d.get(it, i + 1); return v !== '' && v !== null && v !== undefined; }));
   const mono = "'Segoe UI','Inter',Arial,sans-serif";   // clean, readable TV font
   // Column widths come from the real text (measured), so words are never cut.
   // If everything doesn't fit the screen width, the font shrinks a little until it does.
