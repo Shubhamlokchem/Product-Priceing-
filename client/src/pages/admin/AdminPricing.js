@@ -3,6 +3,8 @@ import api from '../../api/axios';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +₹2 to +₹5
+// Text columns that read better left aligned on the TV boards
+const LEFT_COLS = new Set(['PRODUCT', 'MAKE', 'ORIGIN', 'EX']);
 const tgtOf = it => targetText(it.target, it.targetMax, it.price);
 
 const REFRESH_SEC = 7;
@@ -443,7 +445,7 @@ export default function AdminPricing() {
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
        <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
-        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: d.h === 'PRODUCT' ? 'left' : 'center' }}>{d.h}</div>)}
+        {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
        {pRows.map((it, ri) => {
@@ -453,7 +455,7 @@ export default function AdminPricing() {
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 400, color: '#e0f2fe', fontVariantNumeric: 'tabular-nums' }}>
           {cols2.map(d => (
            <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
-            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: d.h === 'PRODUCT' ? 'left' : 'center', ...(d.st || {}),
+            style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center', ...(d.st || {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 400, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
             {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}
@@ -635,7 +637,7 @@ export default function AdminPricing() {
               <div style={{ zoom: scale }}>
                {/* Column headers (only the columns this card uses) */}
                <div style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: colhdrH, padding: `0 ${CARD_PAD}px`, background: '#e8f0fb', lineHeight: 1.1, borderBottom: '1px solid #d6e2f3', fontSize: 9.5, fontWeight: 800, color: '#0b3f8c', letterSpacing: 0.6, textTransform: 'uppercase' }}>
-                {cols.map(d => <span key={d.h} style={wrapS}>{d.h}</span>)}
+                {cols.map(d => <span key={d.h} style={{ ...wrapS, textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center' }}>{d.h}</span>)}
                 {hasCost && <span style={{ ...cellS, textAlign: 'center' }}>COST ₹</span>}
                 <span style={{ ...cellS, textAlign: 'center' }}>{mktHdr}</span>
                 {hasTarget && <span style={{ ...cellS, textAlign: 'center' }}>TARGET ₹</span>}
@@ -646,7 +648,7 @@ export default function AdminPricing() {
                {gItems.map((item, idx) => (
                 <div key={item.product._id} style={{ display: 'grid', gridTemplateColumns: grid, columnGap: CGAP, alignItems: 'center', height: rowH(item), padding: `0 ${CARD_PAD}px`, borderTop: idx ? '1px solid #e6edf7' : 'none', background: idx % 2 ? '#f3f7fd' : '#fff', fontSize: 12, fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>
                  {cols.map(d => (
-                  <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
+                  <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center', ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
                  ))}
                  {hasCost && <span style={{ fontSize: 13, fontWeight: 400, color: '#475569', whiteSpace: 'nowrap', textAlign: 'center' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
                  <span style={{ fontSize: 18, fontWeight: 400, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'center' }}>₹{item.price.toLocaleString()}</span>
