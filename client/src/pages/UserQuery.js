@@ -1,14 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
+import NewQueryForm from '../components/NewQueryForm';
 import './Dashboard.css';
 
-const EMPTY_FORM = { productName: '', make: '', coo: '', origin: '', grade: '', purity: '', message: '' };
-
 export default function UserQuery() {
- const [form, setForm] = useState(EMPTY_FORM);
  const [queries, setQueries] = useState([]);
  const [loading, setLoading] = useState(true);
- const [submitting, setSubmitting] = useState(false);
  const [msg, setMsg] = useState(null);
  const [showForm, setShowForm] = useState(false);
 
@@ -19,22 +16,6 @@ export default function UserQuery() {
  };
 
  useEffect(() => { loadQueries(); }, []);
-
- const handle = e => setForm({ ...form, [e.target.name]: e.target.value });
-
- const submit = async e => {
- e.preventDefault();
- if (!form.productName.trim()) { setMsg({ type: 'error', text: 'Product name is required.' }); return; }
- setSubmitting(true); setMsg(null);
- try {
- await api.post('/queries', form);
- setMsg({ type: 'success', text: 'Query submitted! Admin will reply soon.' });
- setForm(EMPTY_FORM);
- setShowForm(false);
- loadQueries();
- } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Submission failed' }); }
- finally { setSubmitting(false); }
- };
 
  const openCount = queries.filter(q => q.status === 'open').length;
  const repliedCount = queries.filter(q => q.status === 'replied').length;
@@ -49,65 +30,18 @@ export default function UserQuery() {
   <span style={{ fontSize: 12, color: '#6b7280' }}>Sent: <strong style={{ color: '#1a3a6b' }}>{queries.length}</strong></span>
   <span style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>Pending: {openCount}</span>
   <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>Replied: {repliedCount}</span>
-  {!showForm && (
-   <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ padding: '6px 14px', fontSize: 12, flexShrink: 0 }}>+ New Query</button>
-  )}
+  <button onClick={() => { setShowForm(v => !v); setMsg(null); }}
+   style={{ padding: '6px 14px', borderRadius: 7, fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+    border: showForm ? '1.5px solid #fca5a5' : 'none', background: showForm ? '#fef2f2' : '#1a3a6b', color: showForm ? '#dc2626' : '#fff' }}>
+   {showForm ? '✕ Cancel' : '+ New Query'}
+  </button>
  </div>
  </div>
 
  {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 16 }}>{msg.text}</div>}
 
  {/* New query button / form */}
- {!showForm ? null : (
- <div className="card" style={{ marginBottom: 24 }}>
- <h3 style={{ marginBottom: 18, color: '#1a3a6b' }}>Submit a Product Query</h3>
- <form onSubmit={submit}>
- <div className="form-grid">
- <div className="form-field" style={{ gridColumn: 'span 2' }}>
- <label>Product Name *</label>
- <input name="productName" value={form.productName} onChange={handle} placeholder="e.g. Acetonitrile" required />
- </div>
- <div className="form-field">
- <label>Make / Brand</label>
- <input name="make" value={form.make} onChange={handle} placeholder="e.g. BASF" />
- </div>
- <div className="form-field">
- <label>Origin (Country)</label>
- <input name="coo" value={form.coo} onChange={handle} placeholder="e.g. Germany" />
- </div>
- <div className="form-field">
- <label>Region</label>
- <input name="origin" value={form.origin} onChange={handle} placeholder="e.g. EU" />
- </div>
- <div className="form-field">
- <label>Grade</label>
- <input name="grade" value={form.grade} onChange={handle} placeholder="e.g. Industrial, AR" />
- </div>
- <div className="form-field">
- <label>Purity</label>
- <input name="purity" value={form.purity} onChange={handle} placeholder="e.g. 99.5%" />
- </div>
- <div className="form-field" style={{ gridColumn: 'span 2' }}>
- <label>Message / Notes</label>
- <textarea
- name="message"
- value={form.message}
- onChange={handle}
- placeholder="Any specific requirements, quantity, delivery terms..."
- rows={3}
- style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #d1d5db', borderRadius: 8, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }}
- />
- </div>
- </div>
- <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
- <button type="submit" className="btn btn-primary" disabled={submitting}>
- {submitting ? 'Submitting...' : ' Submit Query'}
- </button>
- <button type="button" className="btn btn-danger" onClick={() => { setShowForm(false); setMsg(null); }}>Cancel</button>
- </div>
- </form>
- </div>
- )}
+ {showForm && <NewQueryForm setMsg={setMsg} onDone={ok => { if (ok) setShowForm(false); loadQueries(); }} />}
 
  {/* My queries list */}
  {loading ? <div className="spinner">Loading...</div> : queries.length === 0 ? (
