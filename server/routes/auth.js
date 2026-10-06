@@ -94,6 +94,31 @@ router.delete('/users/:id', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Admin: Change an account's role (admin <-> user)
+router.put('/users/:id/role', protect, adminOnly, async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!['admin', 'user'].includes(role))
+      return res.status(400).json({ message: 'Role must be admin or user' });
+    if (String(req.params.id) === String(req.user.id))
+      return res.status(400).json({ message: 'You cannot change your own role' });
+
+    const user = await User.findById(req.params.id);
+    if (!user || !user.isActive) return res.status(404).json({ message: 'User not found' });
+    if (user.role === role) return res.json({ message: 'Role unchanged', user: safeUser(user) });
+
+    // never leave the system without an admin
+    if (user.role === 'admin' && role === 'user') {
+      const admins = await User.countDocuments({ role: 'admin', isActive: true });
+      if (admins <= 1) return res.status(400).json({ message: 'At least one admin account is required' });
+    }
+    await User.updateOne({ _id: user._id }, { role });
+    res.json({ message: `Role changed to ${role}`, user: { ...safeUser(user), role } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Admin: Reset a user password
 router.put('/users/:id/reset-password', protect, adminOnly, async (req, res) => {
   try {

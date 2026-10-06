@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 import '../Dashboard.css';
 
 const EMPTY = { name: '', email: '', password: '', role: 'user' };
@@ -14,6 +15,9 @@ export default function AdminUsers() {
  const [resetId, setResetId] = useState(null);
  const [newPwd, setNewPwd] = useState('');
  const [filterRole, setFilterRole] = useState('');
+ const [roleSaving, setRoleSaving] = useState(null);
+ const { user: me } = useAuth();
+ const isMe = u => !!me && (String(u._id) === String(me.id || me._id) || (u.email && u.email === me.email));
 
  const load = async () => {
  try {
@@ -51,6 +55,20 @@ export default function AdminUsers() {
  } catch (err) {
  setMsg({ type: 'error', text: err.response?.data?.message || 'Failed' });
  }
+ };
+
+ const changeRole = async (u, role) => {
+ if (role === u.role) return;
+ const what = role === 'admin' ? 'an Admin (full access)' : 'a User (admin access removed)';
+ if (!window.confirm(`Make ${u.name} ${what}?`)) return;
+ setRoleSaving(u._id); setMsg(null);
+ try {
+ await api.put(`/auth/users/${u._id}/role`, { role });
+ setMsg({ type: 'success', text: `${u.name} is now ${role === 'admin' ? 'an Admin' : 'a User'}. It applies the next time they log in.` });
+ load();
+ } catch (err) {
+ setMsg({ type: 'error', text: err.response?.data?.message || 'Could not change the role' });
+ } finally { setRoleSaving(null); }
  };
 
  const resetPassword = async (id) => {
@@ -174,12 +192,21 @@ export default function AdminUsers() {
  <td><div className="product-name">{u.name}</div></td>
  <td style={{ color: '#2d3748' }}>{u.email}</td>
  <td>
- <span className="badge" style={{
- background: u.role === 'admin' ? '#fef3c7' : '#dbeafe',
- color: u.role === 'admin' ? '#92400e' : '#1e40af',
- }}>
- {u.role === 'admin' ? ' Admin' : ' User'}
+ {isMe(u) ? (
+ <span className="badge" title="You cannot change your own role" style={{ background: '#fef3c7', color: '#92400e' }}>
+ {u.role === 'admin' ? 'Admin' : 'User'} (you)
  </span>
+ ) : (
+ <select value={u.role} disabled={roleSaving === u._id} onChange={e => changeRole(u, e.target.value)}
+ title="Change this account's role"
+ style={{ padding: '4px 8px', borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+ border: `1.5px solid ${u.role === 'admin' ? '#fcd34d' : '#93c5fd'}`,
+ background: u.role === 'admin' ? '#fef3c7' : '#dbeafe',
+ color: u.role === 'admin' ? '#92400e' : '#1e40af' }}>
+ <option value="admin">Admin</option>
+ <option value="user">User</option>
+ </select>
+ )}
  </td>
  <td style={{ fontSize: 13, color: '#718096' }}>
  {new Date(u.createdAt).toLocaleDateString('en-IN')}
