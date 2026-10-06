@@ -3,8 +3,8 @@ const PriceEntry = require('../models/PriceEntry');
 const Product = require('../models/Product');
 const { protect, adminOnly } = require('../middleware/auth');
 const numOrNull = v => (v !== null && v !== undefined && v !== '' && !isNaN(v)) ? Number(v) : null;
-// Cost / target are internal — only admins receive them
-const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; delete obj.target; delete obj.targetMax; } return obj; };
+// Cost is internal — only admins receive it. Users get market + target (view only).
+const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; } return obj; };
 
 // Get latest prices for all products
 router.get('/latest', protect, async (req, res) => {
@@ -70,7 +70,7 @@ router.get('/history/:productId', protect, async (req, res) => {
       .sort({ date: -1 })
       .limit(60)
       .lean();
-    res.json(entries);
+    res.json(entries.map(e => hideInternal(req, e)));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

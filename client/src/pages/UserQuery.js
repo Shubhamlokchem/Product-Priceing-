@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './Dashboard.css';
-
-const links = [
- { to: '/dashboard', label: 'Daily Prices', icon: '' },
- { to: '/dashboard/compare', label: 'Compare Prices', icon: '' },
- { to: '/dashboard/queries', label: 'My Queries', icon: '' },
-];
 
 const EMPTY_FORM = { productName: '', make: '', coo: '', origin: '', grade: '', purity: '', message: '' };
 
@@ -47,27 +40,25 @@ export default function UserQuery() {
  const repliedCount = queries.filter(q => q.status === 'replied').length;
 
  return (
- <div className="dashboard-layout">
- <Sidebar links={links} />
- <main className="dashboard-main">
- <div className="page-header">
- <h2> My Queries</h2>
+ <div>
+ {/* Sticky compact header row — same look as the admin pages */}
+ <div className="sticky-page-header">
+ <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'nowrap' }}>
+  <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: '#1a3a6b', flexShrink: 0 }}>Queries</h2>
+  <div style={{ flex: 1 }} />
+  <span style={{ fontSize: 12, color: '#6b7280' }}>Sent: <strong style={{ color: '#1a3a6b' }}>{queries.length}</strong></span>
+  <span style={{ fontSize: 12, color: '#b45309', fontWeight: 600 }}>Pending: {openCount}</span>
+  <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>Replied: {repliedCount}</span>
+  {!showForm && (
+   <button className="btn btn-primary" onClick={() => setShowForm(true)} style={{ padding: '6px 14px', fontSize: 12, flexShrink: 0 }}>+ New Query</button>
+  )}
  </div>
-
- <div className="stat-grid">
- <div className="stat-card"><div className="stat-label">Total Sent</div><div className="stat-value">{queries.length}</div></div>
- <div className="stat-card accent"><div className="stat-label">Pending Reply</div><div className="stat-value">{openCount}</div></div>
- <div className="stat-card success"><div className="stat-label">Replied</div><div className="stat-value">{repliedCount}</div></div>
  </div>
 
  {msg && <div className={`alert alert-${msg.type}`} style={{ marginBottom: 16 }}>{msg.text}</div>}
 
  {/* New query button / form */}
- {!showForm ? (
- <div style={{ marginBottom: 20 }}>
- <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ New Query</button>
- </div>
- ) : (
+ {!showForm ? null : (
  <div className="card" style={{ marginBottom: 24 }}>
  <h3 style={{ marginBottom: 18, color: '#1a3a6b' }}>Submit a Product Query</h3>
  <form onSubmit={submit}>
@@ -170,7 +161,6 @@ export default function UserQuery() {
  </div>
  ))
  )}
- </main>
  </div>
  );
 }

@@ -4,7 +4,6 @@ import {
  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid,
  Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import Sidebar from '../components/Sidebar';
 import api from '../api/axios';
 import './Dashboard.css';
 
@@ -406,17 +405,5 @@ export default function PriceCompare({ adminMode }) {
   </div>
  );
 
- if (adminMode) return content;
-
- const sidebarLinks = [
-  { to: '/dashboard',         label: 'Daily Prices',   icon: '' },
-  { to: '/dashboard/compare', label: 'Compare Prices', icon: '' },
-  { to: '/dashboard/queries', label: 'My Queries',     icon: '' },
- ];
- return (
-  <div className="dashboard-layout">
-   <Sidebar links={sidebarLinks} />
-   <main className="dashboard-main">{content}</main>
-  </div>
- );
+ return content;
 }

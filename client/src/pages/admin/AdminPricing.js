@@ -1,5 +1,6 @@
 import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api/axios';
+import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +₹2 to +₹5
@@ -157,7 +158,7 @@ function PriceTicker({ items, notice = '' }) {
 }
 
 /* ── Group row for normal view ── */
-function GroupRow({ group, groupItems }) {
+function GroupRow({ group, groupItems, showCost = true }) {
  const [open, setOpen] = useState(false);
  const priced = groupItems.filter(i => i.price !== null).length;
  return (
@@ -190,7 +191,7 @@ function GroupRow({ group, groupItems }) {
     <div className="table-wrap">
      <table>
       <thead>
-       <tr><th>Make</th><th>Origin</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th><th style={{ color: '#64748b' }}>Cost (₹)</th><th style={{ color: '#e8a020' }}>Market (₹)</th><th style={{ color: '#7c3aed' }}>Target (₹)</th><th>Notes</th><th>Updated</th></tr>
+       <tr><th>Make</th><th>Origin</th><th>Grade</th><th>Purity</th><th>Package</th><th>Unit</th>{showCost && <th style={{ color: '#64748b' }}>Cost (₹)</th>}<th style={{ color: '#e8a020' }}>Market (₹)</th><th style={{ color: '#7c3aed' }}>Target (₹)</th><th>Notes</th><th>Updated</th></tr>
       </thead>
       <tbody>
        {groupItems.map(item => (
@@ -206,7 +207,7 @@ function GroupRow({ group, groupItems }) {
          <td style={{ verticalAlign: 'middle' }}>{item.product.purity || '—'}</td>
          <td style={{ fontSize: 11, verticalAlign: 'middle' }}>{item.product.itemPackage || '—'}</td>
          <td style={{ verticalAlign: 'middle' }}>{item.product.unit}</td>
-         <td style={{ verticalAlign: 'middle', color: '#475569', fontWeight: 600 }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : <span className="no-price">—</span>}</td>
+         {showCost && <td style={{ verticalAlign: 'middle', color: '#475569', fontWeight: 600 }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : <span className="no-price">—</span>}</td>}
          <td style={{ verticalAlign: 'middle' }}>{item.price !== null
           ? <span className="price-highlight">₹{item.price.toLocaleString()}<span className="currency">/{item.product.unit}</span></span>
           : <span className="no-price">—</span>}
@@ -225,6 +226,8 @@ function GroupRow({ group, groupItems }) {
 }
 
 export default function AdminPricing() {
+ const { user: authUser } = useAuth();
+ const isAdmin = authUser?.role === 'admin';   // users get the same page, view only (no cost, no ribbon editing)
  const today = new Date().toLocaleDateString('en-CA'); // local date (IST), YYYY-MM-DD
  const [date, setDate] = useState(today);
  const [items, setItems] = useState([]);
@@ -327,13 +330,13 @@ export default function AdminPricing() {
  const toggleProduct = id => setFilterProducts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
  const exportPrices = () => {
-  const headers = ['group','make','origin','grade','purity','package','unit','cost','market','target','notes','ex','date'];
+  const headers = ['group','make','origin','grade','purity','package','unit',...(isAdmin ? ['cost'] : []),'market','target','notes','ex','date'];
   const rows = displayItems
    .filter(i => i.price !== null)
    .map(i => [
     i.product.group, i.product.make||'', i.product.coo||'', i.product.grade||'',
     i.product.purity||'', i.product.itemPackage||'', i.product.unit||'',
-    i.cost ?? '', i.price, tgtOf(i), i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
+    ...(isAdmin ? [i.cost ?? ''] : []), i.price, tgtOf(i), i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
    ]);
   const lines = [headers, ...rows].map(r =>
    r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
@@ -763,10 +766,10 @@ export default function AdminPricing() {
        {[
         { icon: '↓', label: 'Export CSV', color: '#16a34a', bg: '#f0fdf4', act: () => { setShowMenu(false); exportPrices(); } },
         { icon: '↻', label: 'Refresh', color: '#1d58a8', bg: '#eff6ff', act: () => { setShowMenu(false); loadData(); } },
-        { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
+        isAdmin && { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
         { icon: '📺', label: 'Price Board 1', color: '#0b3f8c', bg: '#e0ecff', sep: true, act: () => { setShowMenu(false); setTvMode(true); } },
         { icon: '✈️', label: 'Price Board 2', color: '#0e7490', bg: '#e0f7fd', act: () => { setShowMenu(false); setTv2Mode(true); } },
-       ].map(it => (
+       ].filter(Boolean).map(it => (
         <Fragment key={it.label}>
          {it.sep && <div style={{ height: 1, background: '#eef2f7', margin: '4px 6px' }} />}
          <button onClick={it.act}
@@ -819,7 +822,7 @@ export default function AdminPricing() {
     <div className="card"><div className="empty-state"><p style={{ fontSize: 13 }}>No prices available.</p></div></div>
    ) : (
     Object.entries(grouped).map(([group, groupItems]) => (
-     <GroupRow key={group} group={group} groupItems={groupItems} />
+     <GroupRow key={group} group={group} groupItems={groupItems} showCost={isAdmin} />
     ))
    )}
   </div>
