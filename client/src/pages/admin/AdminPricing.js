@@ -1,11 +1,18 @@
 import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
+import NoSleep from 'nosleep.js';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '07 Oct 2026 · 5:15 pm (screen stays awake, target rounding)';
+const BOARD_VERSION = '07 Oct 2026 · 5:40 pm (stronger keep-awake for smart TVs)';
+
+// Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
+// NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
+let noSleep = null;
+const keepAwakeOn = () => { try { if (!noSleep) noSleep = new NoSleep(); noSleep.enable().catch(() => {}); } catch { /* not supported */ } };
+const keepAwakeOff = () => { try { noSleep?.disable(); } catch { /* ignore */ } };
 
 // Keep the TV / monitor awake while a price board is open (no mouse or keyboard activity needed).
 // 1) Screen Wake Lock (Chrome, Edge, newer smart-TV browsers)  2) fallback: a tiny silent looping video,
@@ -19,7 +26,10 @@ function useKeepAwake(active) {
     if (!stopped && 'wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen');
    } catch { /* not allowed right now — the video fallback below still runs */ }
   };
-  const onVisible = () => { if (document.visibilityState === 'visible') { request(); video?.play?.().catch(() => {}); } };
+  const onVisible = () => { if (document.visibilityState === 'visible') { request(); video?.play?.().catch(() => {}); keepAwakeOn(); } };
+  // any remote / key / click on the board also re-arms it (helps TVs that drop the video after a while)
+  const onInput = () => keepAwakeOn();
+  document.addEventListener('keydown', onInput); document.addEventListener('click', onInput);
   request();
   try {
    const canvas = document.createElement('canvas'); canvas.width = 2; canvas.height = 2;
@@ -38,6 +48,8 @@ function useKeepAwake(active) {
   document.addEventListener('fullscreenchange', onVisible);
   return () => {
    stopped = true;
+   document.removeEventListener('keydown', onInput); document.removeEventListener('click', onInput);
+   keepAwakeOff();
    document.removeEventListener('visibilitychange', onVisible);
    document.removeEventListener('fullscreenchange', onVisible);
    if (timer) clearInterval(timer);
@@ -828,8 +840,8 @@ export default function AdminPricing() {
         { icon: '↓', label: 'Export CSV', color: '#16a34a', bg: '#f0fdf4', act: () => { setShowMenu(false); exportPrices(); } },
         { icon: '↻', label: 'Refresh', color: '#1d58a8', bg: '#eff6ff', act: () => { setShowMenu(false); loadData(); } },
         isAdmin && { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
-        { icon: '📺', label: 'Price Board 1', color: '#0b3f8c', bg: '#e0ecff', sep: true, act: () => { setShowMenu(false); setTvMode(true); } },
-        { icon: '✈️', label: 'Price Board 2', color: '#0e7490', bg: '#e0f7fd', act: () => { setShowMenu(false); setTv2Mode(true); } },
+        { icon: '📺', label: 'Price Board 1', color: '#0b3f8c', bg: '#e0ecff', sep: true, act: () => { keepAwakeOn(); setShowMenu(false); setTvMode(true); } },
+        { icon: '✈️', label: 'Price Board 2', color: '#0e7490', bg: '#e0f7fd', act: () => { keepAwakeOn(); setShowMenu(false); setTv2Mode(true); } },
        ].filter(Boolean).map(it => (
         <Fragment key={it.label}>
          {it.sep && <div style={{ height: 1, background: '#eef2f7', margin: '4px 6px' }} />}
