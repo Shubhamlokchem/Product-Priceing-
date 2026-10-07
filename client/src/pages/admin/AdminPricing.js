@@ -376,8 +376,8 @@ export default function AdminPricing() {
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
   const twoCols = false;
   // At least 25 products per screen: rows shrink to fit on small screens, stay 34px where there is room
-  const MIN_ROWS = 25;
-  const perPanel = Math.max(MIN_ROWS, Math.floor(boardH / 34));
+  const ROWS_PER_SCREEN = 20;   // exactly 20 products on every screen; rows stretch to fill the height
+  const perPanel = ROWS_PER_SCREEN;
   const ROW_H2 = Math.floor((boardH / perPanel) * 10) / 10;
   const perPage = perPanel;
   const pages2 = Math.max(1, Math.ceil(rows2.length / perPage));
@@ -415,7 +415,7 @@ export default function AdminPricing() {
    const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0);
    return Math.ceil(Math.max(hdr, val) + PADX + 2);
   });
-  let FS = Math.max(11, Math.min(18, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
+  let FS = Math.max(11, Math.min(22, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
   let need = needFor(FS);
   for (let k = 0; k < 8 && need.reduce((a, b) => a + b, 0) > boardW && FS > 10; k++) {
    FS = Math.max(10, Math.floor(FS * boardW / need.reduce((a, b) => a + b, 0) * 2) / 2);
