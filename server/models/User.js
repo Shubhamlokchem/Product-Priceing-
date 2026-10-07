@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema({
   role:      { type: String, enum: ['admin', 'user'], default: 'user' },
   category:  { type: String, default: '' },
   isActive:  { type: Boolean, default: true },
+  // IP addresses this account may log in from. Empty = any IP. "203.0.113.*" matches a whole range.
+  allowedIps: { type: [String], default: [] },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
