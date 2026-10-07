@@ -18,7 +18,8 @@ export default function AdminUsers() {
  const [roleSaving, setRoleSaving] = useState(null);
  const [selected, setSelected] = useState(new Set());   // ticked account ids
  const [ipEdit, setIpEdit] = useState(null);            // null | account id | 'bulk'
- const [ipText, setIpText] = useState('');
+ const [ipList, setIpList] = useState([]);              // IPs being edited (as separate chips)
+ const [ipDraft, setIpDraft] = useState('');            // the IP being typed
  const [ipMode, setIpMode] = useState('add');           // bulk: 'add' | 'replace'
  const [ipSaving, setIpSaving] = useState(false);
  const [myIp, setMyIp] = useState('');
@@ -36,16 +37,22 @@ export default function AdminUsers() {
  useEffect(() => { load(); api.get('/auth/my-ip').then(r => setMyIp(r.data?.ip || '')).catch(() => {}); }, []);
 
  const toggleSel = id => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
- const openIpEdit = (key, text) => { setIpEdit(key); setIpText(text); setIpMode('add'); setResetId(null); setMsg(null); };
- const addMyIp = () => { if (myIp && !ipText.split(/[\s,;]+/).includes(myIp)) setIpText(t => (t.trim() ? t.trim() + '\n' : '') + myIp); };
+ const openIpEdit = (key, list) => { setIpEdit(key); setIpList(list); setIpDraft(''); setIpMode('add'); setResetId(null); setMsg(null); };
+ // Add what is typed (one IP, or several separated by space / comma) as separate chips
+ const pushIps = text => {
+ const parts = String(text || '').split(/[\s,;]+/).map(x => x.trim()).filter(Boolean);
+ if (parts.length) setIpList(l => [...l, ...parts.filter(x => !l.includes(x))].filter((x, i, a) => a.indexOf(x) === i));
+ setIpDraft('');
+ };
+ const pendingIps = () => [...ipList, ...ipDraft.split(/[\s,;]+/).map(x => x.trim()).filter(x => x && !ipList.includes(x))];
 
  // Save allowed login IPs for one account (replace) or for all ticked accounts (add / replace)
- const saveIps = async (ids, text, mode) => {
+ const saveIps = async (ids, ips, mode) => {
  setIpSaving(true); setMsg(null);
  try {
- const { data } = await api.put('/auth/users/ips', { ids, ips: text, mode });
+ const { data } = await api.put('/auth/users/ips', { ids, ips, mode });
  setMsg({ type: 'success', text: data.message });
- setIpEdit(null); setIpText('');
+ setIpEdit(null); setIpList([]); setIpDraft('');
  load();
  } catch (err) {
  setMsg({ type: 'error', text: err.response?.data?.message || 'Could not save the IP addresses' });
@@ -113,35 +120,45 @@ export default function AdminUsers() {
  const userCount = users.filter(u => u.role === 'user').length;
 
  const filtered = users.filter(u => !filterRole || u.role === filterRole);
+ // Checkbox that carries the Sr No. inside it (filled blue when ticked)
+ const numBox = (on, part) => ({ minWidth: 24, height: 24, padding: '0 4px', boxSizing: 'border-box', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 6, fontSize: 12, fontWeight: 700,
+  border: `1.5px solid ${on || part ? '#1a3a6b' : '#94a3b8'}`, background: on ? '#1a3a6b' : part ? '#dbe7ff' : '#fff', color: on ? '#fff' : '#334155', transition: 'all 0.12s' });
  const selIds = filtered.filter(u => selected.has(u._id)).map(u => u._id);
  const allOn = filtered.length > 0 && selIds.length === filtered.length;
  const someOn = selIds.length > 0 && !allOn;
 
- // Shared editor box: one IP per line (or comma separated)
+ // Compact one-line IP editor: each IP is its own chip (× removes it), type the next one and press Enter or +
  const ipEditor = ({ title, bulk, onSave }) => (
- <div style={{ padding: '8px 0' }}>
- <div style={{ fontSize: 13, fontWeight: 700, color: '#1a3a6b' }}>{title}</div>
- <div style={{ fontSize: 11, color: '#6b7280', margin: '2px 0 6px' }}>
- One IP per line, or separated by commas. Use <b>*</b> for a range, e.g. 203.0.113.*. Leave empty to allow login from any IP.
- </div>
- <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap' }}>
- <textarea value={ipText} onChange={e => setIpText(e.target.value)} rows={3} autoFocus
- placeholder={'e.g.\n203.0.113.7\n198.51.100.*'}
- style={{ width: 280, padding: '7px 10px', border: '1.5px solid #cbd5e1', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical' }} />
- <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
- {myIp && <button type="button" className="btn btn-sm" onClick={addMyIp} style={{ background: '#fff', border: '1px solid #93c5fd', color: '#1d58a8' }}>+ Add my IP ({myIp})</button>}
+ <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '4px 0' }}>
+ <span style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b', whiteSpace: 'nowrap' }}>{title}</span>
  {bulk && (
- <select value={ipMode} onChange={e => setIpMode(e.target.value)} style={{ padding: '5px 8px', border: '1.5px solid #e5e7eb', borderRadius: 7, fontSize: 12 }}>
- <option value="add">Add to their existing IPs</option>
- <option value="replace">Replace their existing IPs</option>
+ <select value={ipMode} onChange={e => setIpMode(e.target.value)} style={{ padding: '4px 6px', border: '1.5px solid #cbd5e1', borderRadius: 7, fontSize: 12, fontWeight: 600 }}>
+ <option value="add">Add these IPs</option>
+ <option value="replace">Replace with these IPs</option>
+ <option value="remove">Delete these IPs</option>
  </select>
  )}
- <div style={{ display: 'flex', gap: 6 }}>
- <button type="button" className="btn btn-sm btn-accent" disabled={ipSaving} onClick={onSave}>{ipSaving ? 'Saving…' : 'Save IPs'}</button>
- <button type="button" className="btn btn-sm btn-danger" onClick={() => { setIpEdit(null); setIpText(''); }}>Cancel</button>
+ <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', flex: 1, minWidth: 260, padding: '3px 6px', background: '#fff', border: '1.5px solid #cbd5e1', borderRadius: 8 }}>
+ {ipList.map(ip => (
+ <span key={ip} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: '#0e7490', background: '#ecfeff', border: '1px solid #a5f3fc', padding: '1px 3px 1px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+ {ip}
+ <span onClick={() => setIpList(l => l.filter(x => x !== ip))} title="Remove this IP" style={{ cursor: 'pointer', color: '#dc2626', fontSize: 14, lineHeight: 1, padding: '0 3px' }}>×</span>
+ </span>
+ ))}
+ <input value={ipDraft} autoFocus onChange={e => { const v = e.target.value; if (/[\s,;]$/.test(v)) pushIps(v); else setIpDraft(v); }}
+ onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); pushIps(ipDraft); } if (e.key === 'Backspace' && !ipDraft && ipList.length) setIpList(l => l.slice(0, -1)); }}
+ onPaste={e => { const t = e.clipboardData.getData('text'); if (/[\s,;]/.test(t)) { e.preventDefault(); pushIps(t); } }}
+ placeholder={ipList.length ? 'Next IP…' : 'Type an IP, press Enter (e.g. 203.0.113.7 or 203.0.113.*)'}
+ style={{ flex: 1, minWidth: 150, border: 'none', outline: 'none', fontSize: 12, padding: '4px 2px', background: 'transparent' }} />
+ <button type="button" onClick={() => pushIps(ipDraft)} title="Add this IP"
+ style={{ width: 22, height: 22, borderRadius: 6, border: 'none', background: '#1d58a8', color: '#fff', fontWeight: 800, cursor: 'pointer', lineHeight: 1, opacity: ipDraft.trim() ? 1 : 0.45 }}>+</button>
  </div>
- </div>
- </div>
+ {myIp && !ipList.includes(myIp) && (
+ <button type="button" onClick={() => pushIps(myIp)} title={`Add the IP you are using now (${myIp})`}
+ style={{ fontSize: 11, fontWeight: 700, color: '#1d58a8', background: '#fff', border: '1px solid #93c5fd', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ My IP</button>
+ )}
+ <button type="button" className="btn btn-sm btn-accent" disabled={ipSaving} onClick={onSave}>{ipSaving ? 'Saving…' : 'Save'}</button>
+ <button type="button" className="btn btn-sm btn-danger" onClick={() => { setIpEdit(null); setIpList([]); setIpDraft(''); }}>Cancel</button>
  </div>
  );
 
@@ -164,6 +181,12 @@ export default function AdminUsers() {
    <option value="admin">Admin</option>
    <option value="user">User</option>
   </select>
+  {/* Bulk IP: add / replace / delete IPs on all ticked accounts in one go */}
+  <button onClick={() => { if (!selIds.length) { setMsg({ type: 'error', text: 'Tick the accounts first (or use Select all), then click Bulk IP.' }); return; } openIpEdit('bulk', []); }}
+   style={{ padding: '6px 12px', fontSize: 12, fontWeight: 700, borderRadius: 7, cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap',
+    background: selIds.length ? '#0e7490' : '#fff', color: selIds.length ? '#fff' : '#0e7490', border: '1.5px solid #0e7490' }}>
+   Bulk IP{selIds.length ? ` (${selIds.length})` : ''}
+  </button>
   {/* Create button */}
   {!showForm && (
    <button className="btn btn-primary" onClick={() => { setShowForm(true); setMsg(null); }}
@@ -228,23 +251,19 @@ export default function AdminUsers() {
  </div>
  ) : (
  <div className="table-wrap">
- {/* Bulk bar: appears when accounts are ticked */}
- {selIds.length > 0 && (
- <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 12px', marginBottom: 10, background: '#eef3ff', border: '1px solid #c7d7fa', borderRadius: 10 }}>
- <span style={{ fontSize: 12, fontWeight: 700, color: '#1a3a6b' }}>{selIds.length} selected</span>
- <button className="btn btn-sm btn-primary" onClick={() => openIpEdit('bulk', '')}>Set IP addresses</button>
- <button className="btn btn-sm btn-danger" disabled={ipSaving}
- onClick={() => { if (window.confirm(`Remove all IP addresses from ${selIds.length} account(s)? They will be able to log in from any network.`)) saveIps(selIds, '', 'replace'); }}>
- Clear IPs
- </button>
- <button className="btn btn-sm" onClick={() => { setSelected(new Set()); if (ipEdit === 'bulk') setIpEdit(null); }} style={{ background: '#fff', border: '1px solid #e5e7eb', color: '#6b7280' }}>Unselect</button>
- {ipEdit === 'bulk' && (
- <div style={{ flexBasis: '100%' }}>{ipEditor({
- title: `IP addresses for ${selIds.length} selected account(s)`,
+ {/* Bulk IP editor (one compact line) */}
+ {ipEdit === 'bulk' && selIds.length > 0 && (
+ <div style={{ padding: '4px 10px', marginBottom: 8, background: '#ecfeff', border: '1px solid #a5f3fc', borderRadius: 9 }}>
+ {ipEditor({
+ title: `${selIds.length} account${selIds.length > 1 ? 's' : ''}:`,
  bulk: true,
- onSave: () => saveIps(selIds, ipText, ipMode),
- })}</div>
- )}
+ onSave: () => {
+ const ips = pendingIps();
+ if (!ips.length && ipMode !== 'replace') { setMsg({ type: 'error', text: 'Type at least one IP address.' }); return; }
+ if (!ips.length && !window.confirm(`Remove ALL IP addresses from ${selIds.length} account(s)? They will be able to log in from any network.`)) return;
+ saveIps(selIds, ips, ipMode);
+ },
+ })}
  </div>
  )}
  <table>
@@ -252,10 +271,10 @@ export default function AdminUsers() {
  <tr>
  <th style={{ whiteSpace: 'nowrap' }}>
  <label title="Select all" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
- <input type="checkbox" checked={allOn} ref={el => { if (el) el.indeterminate = someOn; }}
- onChange={e => setSelected(e.target.checked ? new Set(filtered.map(u => u._id)) : new Set())}
- style={{ accentColor: '#1a3a6b', width: 15, height: 15, cursor: 'pointer' }} />
- Sr No.
+ <input type="checkbox" checked={allOn} onChange={e => setSelected(e.target.checked ? new Set(filtered.map(u => u._id)) : new Set())}
+ style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+ <span style={numBox(allOn, someOn)}>{allOn ? '✓' : someOn ? '–' : ''}</span>
+ All
  </label>
  </th>
  <th>Name</th>
@@ -271,10 +290,10 @@ export default function AdminUsers() {
  <>
  <tr key={u._id} style={{ background: selected.has(u._id) ? '#f0f5ff' : undefined }}>
  <td style={{ whiteSpace: 'nowrap' }}>
- <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#475569', fontWeight: 600 }}>
+ <label title={selected.has(u._id) ? 'Unselect' : 'Select'} style={{ display: 'inline-flex', cursor: 'pointer' }}>
  <input type="checkbox" checked={selected.has(u._id)} onChange={() => toggleSel(u._id)}
- style={{ accentColor: '#1a3a6b', width: 15, height: 15, cursor: 'pointer' }} />
- {i + 1}
+ style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
+ <span style={numBox(selected.has(u._id))}>{i + 1}</span>
  </label>
  </td>
  <td><div className="product-name">{u.name}</div></td>
@@ -301,12 +320,16 @@ export default function AdminUsers() {
  {(u.allowedIps || []).length === 0
  ? <span style={{ fontSize: 11, color: '#9ca3af' }}>Any IP</span>
  : u.allowedIps.map(ip => (
- <span key={ip} style={{ fontSize: 11, fontWeight: 600, color: '#0e7490', background: '#ecfeff', border: '1px solid #a5f3fc', padding: '1px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>{ip}</span>
+ <span key={ip} style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontSize: 11, fontWeight: 600, color: '#0e7490', background: '#ecfeff', border: '1px solid #a5f3fc', padding: '1px 3px 1px 8px', borderRadius: 99, whiteSpace: 'nowrap' }}>
+ {ip}
+ <span title="Delete this IP" onClick={() => { if (window.confirm(`Delete IP ${ip} from ${u.name}?`)) saveIps([u._id], [ip], 'remove'); }}
+ style={{ cursor: 'pointer', color: '#dc2626', fontSize: 14, lineHeight: 1, padding: '0 3px' }}>×</span>
+ </span>
  ))}
- <button onClick={() => (ipEdit === u._id ? setIpEdit(null) : openIpEdit(u._id, (u.allowedIps || []).join('\n')))}
+ <button onClick={() => (ipEdit === u._id ? setIpEdit(null) : openIpEdit(u._id, [...(u.allowedIps || [])]))}
  title="Add or change the IP addresses this account can log in from"
  style={{ fontSize: 11, fontWeight: 700, color: '#1d58a8', background: '#fff', border: '1px dashed #93c5fd', borderRadius: 99, padding: '1px 9px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
- {(u.allowedIps || []).length ? 'Edit' : '+ Add IP'}
+ {(u.allowedIps || []).length ? '+ Add / Edit' : '+ Add IP'}
  </button>
  </div>
  </td>
@@ -328,9 +351,9 @@ export default function AdminUsers() {
  </tr>
  {ipEdit === u._id && (
  <tr key={u._id + '_ips'} style={{ background: '#f0f9ff' }}>
- <td colSpan={7}>{ipEditor({
- title: `IP addresses ${u.name} can log in from`,
- onSave: () => saveIps([u._id], ipText, 'replace'),
+ <td colSpan={7} style={{ padding: '4px 12px' }}>{ipEditor({
+ title: `${u.name}:`,
+ onSave: () => saveIps([u._id], pendingIps(), 'replace'),
  })}</td>
  </tr>
  )}

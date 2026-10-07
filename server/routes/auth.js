@@ -133,7 +133,7 @@ router.delete('/users/:id', protect, adminOnly, async (req, res) => {
 router.get('/my-ip', protect, adminOnly, (req, res) => res.json({ ip: clientIp(req) }));
 
 // Admin: set allowed login IPs for one or many accounts
-// body: { ids: [...], ips: [...] | "a, b", mode: 'replace' | 'add' }
+// body: { ids: [...], ips: [...] | "a, b", mode: 'replace' | 'add' | 'remove' }
 router.put('/users/ips', protect, adminOnly, async (req, res) => {
   try {
     const { ids, ips, mode } = req.body;
@@ -144,7 +144,10 @@ router.put('/users/ips', protect, adminOnly, async (req, res) => {
     const users = await User.find({ _id: { $in: ids }, isActive: true });
     const me = clientIp(req);
     for (const u of users) {
-      const next = mode === 'add' ? [...new Set([...(u.allowedIps || []), ...list])].slice(0, 50) : list;
+      const cur = u.allowedIps || [];
+      const next = mode === 'add' ? [...new Set([...cur, ...list])].slice(0, 50)
+        : mode === 'remove' ? cur.filter(ip => !list.includes(ip))
+        : list;
       // never let the admin lock themselves out
       if (String(u._id) === String(req.user.id) && !ipAllowed(me, next))
         return res.status(400).json({ message: `This would block your own login (your IP is ${me}). Add ${me} to the list for your account.` });
