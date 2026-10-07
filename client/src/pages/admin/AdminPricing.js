@@ -4,6 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
+// Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
+const BOARD_VERSION = '07 Oct 2026 · 4:30 pm (conditions line on top, live ribbon at bottom)';
+
 // Text columns that read better left aligned on the TV boards
 const LEFT_COLS = new Set(['PRODUCT', 'MAKE', 'ORIGIN', 'EX']);
 const tgtOf = it => targetText(it.target, it.targetMax, it.price);
@@ -49,7 +52,7 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, whiteSpace: 'nowrap' }}>
      <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: 0.4 }}>Lok Chemicals</span>
      <span style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.3)' }} />
-     <span style={{ fontSize: 12, fontWeight: 800, color: '#bae6fd', letterSpacing: 1.6, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99, background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(125,211,252,0.35)' }}>Live Price Index</span>
+     <span style={{ fontSize: 12, fontWeight: 800, color: '#bae6fd', letterSpacing: 1.6, textTransform: 'uppercase', padding: '3px 10px', borderRadius: 99, background: 'rgba(56,189,248,0.14)', border: '1px solid rgba(125,211,252,0.35)' }} title={`Version ${BOARD_VERSION}`}>Live Price Index</span>
     </div>
 
     <div style={{ flex: 1 }} />
