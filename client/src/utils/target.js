@@ -1,15 +1,15 @@
 // Target price range helpers.
-// Default target = market + 2.5%  to  market + 5%   (market 10 → "10.25 - 10.5", market 100 → "102.5 - 105").
+// Default target = market + 2.5%  to  market + 5%   (one decimal: market 10 → "10.3 - 10.5", market 100 → "102.5 - 105").
 // A target typed by the admin is stored and used instead of the default.
 export const TARGET_MIN_PCT = 2.5;   // % added to market for the low end
 export const TARGET_MAX_PCT = 5;     // % added to market for the high end
 
 const fmtN = n => String(Math.round(Number(n) * 100) / 100);
 const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
-// market + pct%, rounded to paise without floating-point drift (93 + 2.5% = 95.33, not 95.32)
-const addPct = (m, pct) => Math.round((m * Math.round((100 + pct) * 10)) / 10) / 100;
+// market + pct%, rounded to ONE decimal place, without floating-point drift (10 + 2.5% = 10.3, 93 + 2.5% = 95.3)
+const addPct = (m, pct) => Math.round((m * Math.round((100 + pct) * 10)) / 100) / 10;
 
-// "10.25 - 10.5" for a market price, '' when there is no market price
+// "10.3 - 10.5" for a market price, '' when there is no market price
 export const defaultTarget = market => {
   if (!isNum(market) || Number(market) <= 0) return '';
   const m = Number(market);

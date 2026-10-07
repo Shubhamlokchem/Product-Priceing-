@@ -157,13 +157,13 @@ function PriceTicker({ items, notice = '' }) {
  );
 }
 
-/* ── Price conditions: one thin fixed line above the ribbon on both TV boards (not a column) ── */
+/* ── Price conditions: one fixed bold line at the top centre of both TV boards, under the top bar (not a column) ── */
 const PRICE_TERMS = ['Subject to payment & delivery terms', 'Subject to relation with customer', 'Subject to last price to customer'];
-const TERMS_H = 24;
+const TERMS_H = 26;
 function PriceTerms() {
  return (
-  <div style={{ height: TERMS_H, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '0 12px', background: '#061a3d', borderTop: '1px solid rgba(147,197,253,0.25)', color: '#dbeafe', fontSize: 12.5, fontWeight: 600, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-   <span style={{ color: '#fcd34d', fontWeight: 800, letterSpacing: 1, fontSize: 11 }}>PRICES ARE</span>
+  <div style={{ height: TERMS_H, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '0 12px', background: '#061a3d', borderBottom: '1px solid rgba(147,197,253,0.25)', color: '#fff', fontSize: 13.5, fontWeight: 800, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+   <span style={{ color: '#fcd34d', fontWeight: 900, letterSpacing: 1, fontSize: 12.5 }}>PRICES ARE</span>
    {PRICE_TERMS.map(t => <span key={t}><span style={{ color: '#fcd34d', marginRight: 4 }}>*</span>{t}</span>)}
   </div>
  );
@@ -452,6 +452,13 @@ export default function AdminPricing() {
      onPrev={() => { setTv2Page(p => (p - 1 + pages2) % pages2); setTv2Countdown(TV2_PAGE_SEC); }}
      onNext={() => { setTv2Page(p => (p + 1) % pages2); setTv2Countdown(TV2_PAGE_SEC); }}
      onExit={() => setTv2Mode(false)} />
+    <PriceTerms />
+
+    {/* Live ribbon: directly under the top bar, above the table header */}
+    <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderBottom: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
+    </div>
 
     {/* Board panels */}
     <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '4px 6px', minHeight: 0 }}>
@@ -484,12 +491,6 @@ export default function AdminPricing() {
      ))}
     </div>
 
-    <PriceTerms />
-    {/* Ticker (same as Price Board 1) */}
-    <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
-    </div>
 
    </div>
   );
@@ -622,6 +623,13 @@ export default function AdminPricing() {
      onPrev={() => { setTvPage(p => (p - 1 + totalPages) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
      onNext={() => { setTvPage(p => (p + 1) % totalPages); setTvCountdown(TV_PAGE_SEC); }}
      onExit={() => setTvMode(false)} />
+    <PriceTerms />
+
+    {/* Live ribbon: directly under the top bar, above the cards */}
+    <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderBottom: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
+    </div>
 
     {/* ── 5 × 3 Grid ── */}
     <div style={{ flex: 1, padding: `${PAD_V / 2}px 10px`, minHeight: 0 }}>
@@ -692,12 +700,6 @@ export default function AdminPricing() {
       </>}
     </div>
 
-    <PriceTerms />
-    {/* ── Ticker ── */}
-    <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
-     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
-    </div>
     <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
    </div>
   );
