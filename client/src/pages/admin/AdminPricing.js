@@ -454,11 +454,6 @@ export default function AdminPricing() {
      onExit={() => setTv2Mode(false)} />
     <PriceTerms />
 
-    {/* Live ribbon: directly under the top bar, above the table header */}
-    <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderBottom: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
-     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
-    </div>
 
     {/* Board panels */}
     <div style={{ flex: 1, display: 'flex', gap: PANEL_GAP, padding: '4px 6px', minHeight: 0 }}>
@@ -491,6 +486,12 @@ export default function AdminPricing() {
      ))}
     </div>
 
+
+    {/* Live ribbon (bottom of the screen) */}
+    <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
+    </div>
 
    </div>
   );
@@ -625,11 +626,6 @@ export default function AdminPricing() {
      onExit={() => setTvMode(false)} />
     <PriceTerms />
 
-    {/* Live ribbon: directly under the top bar, above the cards */}
-    <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderBottom: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
-     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
-     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
-    </div>
 
     {/* ── 5 × 3 Grid ── */}
     <div style={{ flex: 1, padding: `${PAD_V / 2}px 10px`, minHeight: 0 }}>
@@ -700,6 +696,11 @@ export default function AdminPricing() {
       </>}
     </div>
 
+    {/* Live ribbon (bottom of the screen) */}
+    <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
+     <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
+     <div style={{ flex: 1, overflow: 'hidden' }}><PriceTicker items={latestItems} notice={ribbonText} /></div>
+    </div>
     <style>{`@keyframes tvpulse{0%,100%{opacity:1}50%{opacity:.25}}`}</style>
    </div>
   );
