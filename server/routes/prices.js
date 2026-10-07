@@ -10,9 +10,21 @@ const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete ob
 router.get('/latest', protect, async (req, res) => {
   try {
     const products = await Product.find({ isActive: true });
+    // Two most recent priced days per product → the older one is the "previous price" (for the up / down arrow)
+    const lastTwo = await PriceEntry.aggregate([
+      { $match: { price: { $ne: null } } },
+      { $sort: { date: -1 } },
+      { $group: { _id: '$product', rows: { $push: { price: '$price', date: '$date' } } } },
+      { $project: { rows: { $slice: ['$rows', 2] } } },
+    ]);
+    const lastTwoMap = {};
+    lastTwo.forEach(x => { lastTwoMap[String(x._id)] = x.rows; });
     const result = await Promise.all(products.map(async (product) => {
       const latest = await PriceEntry.findOne({ product: product._id }).sort({ date: -1 }).lean();
+      const prev = latest ? (lastTwoMap[String(product._id)] || []).find(x => x.date < latest.date) : null;
       return hideInternal(req, {
+        prevPrice: prev?.price ?? null,
+        prevDate:  prev?.date  ?? null,
         product,
         price:     latest?.price     ?? null,
         cost:      latest?.cost      ?? null,
@@ -41,9 +53,21 @@ router.get('/date/:date', protect, async (req, res) => {
     const entryMap = {};
     entries.forEach(e => { if (e.product) entryMap[e.product._id.toString()] = e; });
 
+    // Last priced day before this date, per product → "previous price" (for the up / down arrow)
+    const before = await PriceEntry.aggregate([
+      { $match: { date: { $lt: req.params.date }, price: { $ne: null } } },
+      { $sort: { date: -1 } },
+      { $group: { _id: '$product', price: { $first: '$price' }, date: { $first: '$date' } } },
+    ]);
+    const prevMap = {};
+    before.forEach(x => { prevMap[String(x._id)] = x; });
+
     const result = products.map(product => {
       const entry = entryMap[product._id.toString()];
+      const prev = entry ? prevMap[product._id.toString()] : null;
       return hideInternal(req, {
+        prevPrice: prev?.price ?? null,
+        prevDate:  prev?.date  ?? null,
         product,
         price:     entry?.price     ?? null,
         cost:      entry?.cost      ?? null,

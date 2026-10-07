@@ -6,7 +6,7 @@ import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '07 Oct 2026 · 5:40 pm (stronger keep-awake for smart TVs)';
+const BOARD_VERSION = '07 Oct 2026 · 6:00 pm (price up / down arrows)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
@@ -57,6 +57,20 @@ function useKeepAwake(active) {
    try { video?.pause(); video?.remove(); } catch { /* ignore */ }
   };
  }, [active]);
+}
+
+// Up / down arrow after the market price: compares with the previous priced day in the price history.
+// The slot always takes the same width, so prices stay lined up whether or not a row has an arrow.
+function TrendArrow({ item, size = '0.72em' }) {
+ const cur = Number(item?.price), prev = Number(item?.prevPrice);
+ const has = item?.price != null && item?.prevPrice != null && !isNaN(cur) && !isNaN(prev) && cur !== prev;
+ const up = has && cur > prev;
+ return (
+  <span title={has ? `${up ? 'Up' : 'Down'} from ₹${prev.toLocaleString()}${item.prevDate ? ` on ${fmtDate(item.prevDate)}` : ''}` : undefined}
+   style={{ display: 'inline-block', width: '1.1em', marginLeft: '0.2em', textAlign: 'center', fontSize: size, lineHeight: 1, verticalAlign: 'middle', color: up ? '#22c55e' : '#ef4444', fontWeight: 900 }}>
+   {has ? (up ? '▲' : '▼') : ''}
+  </span>
+ );
 }
 
 // Text columns that read better left aligned on the TV boards
@@ -276,7 +290,7 @@ function GroupRow({ group, groupItems, showCost = true }) {
          <td style={{ verticalAlign: 'middle' }}>{item.product.unit}</td>
          {showCost && <td style={{ verticalAlign: 'middle', color: '#475569', fontWeight: 600 }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : <span className="no-price">—</span>}</td>}
          <td style={{ verticalAlign: 'middle' }}>{item.price !== null
-          ? <span className="price-highlight">₹{item.price.toLocaleString()}<span className="currency">/{item.product.unit}</span></span>
+          ? <span className="price-highlight" style={{ whiteSpace: 'nowrap' }}>₹{item.price.toLocaleString()}<span className="currency">/{item.product.unit}</span><TrendArrow item={item} size="0.8em" /></span>
           : <span className="no-price">—</span>}
          </td>
          <td style={{ verticalAlign: 'middle', color: '#7c3aed', fontWeight: 600 }}>{tgtOf(item) ? <span style={{ whiteSpace: 'nowrap' }}>₹{tgtOf(item)}</span> : <span className="no-price">—</span>}</td>
@@ -480,7 +494,7 @@ export default function AdminPricing() {
   const needFor = fs => cols2.map(d => {
    const hdr = tw2(d.h, `900 ${Math.max(11, fs - 1.5)}px ${mono}`, 1);
    const font = d.price ? `400 ${fs + 2}px ${mono}` : `${d.st?.fontWeight || 400} ${fs}px ${mono}`;
-   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0);
+   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0) + (d.price ? (fs + 2) * 1.0 : 0);   // + room for the up / down arrow
    return Math.ceil(Math.max(hdr, val) + PADX + 2);
   });
   let FS = Math.max(11, Math.min(22, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
@@ -533,6 +547,7 @@ export default function AdminPricing() {
              ...(d.price ? { color: '#4ade80', fontWeight: 400, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
             {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}
+            {d.price && <TrendArrow item={it} />}
            </div>
           ))}
          </div>
@@ -617,7 +632,7 @@ export default function AdminPricing() {
    const showDate = dateSet.size > 1, showUnit = unitSet.size > 1;
    const oneDate = showDate ? '' : [...dateSet][0];
    const mktHdr = showUnit ? 'MARKET ₹' : `MARKET ₹/${String([...unitSet][0] || '').toUpperCase()}`;
-   const mktW = Math.max(hdrW(mktHdr), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP))) + 2;
+   const mktW = Math.max(hdrW(mktHdr), maxOf(gItems, it => tw(`₹${it.price.toLocaleString()}`, F_BIGP)) + 18) + 2;   // + room for the up / down arrow
    const tgtW = hasTarget ? Math.max(hdrW('TARGET ₹'), maxOf(gItems, it => tw(tgtOf(it) ? `₹${tgtOf(it)}` : '—', F_SMALLP))) + 2 : 0;
    const nCols = cols.length + (hasCost ? 1 : 0) + 1 + (hasTarget ? 1 : 0) + (showUnit ? 1 : 0) + (showDate ? 1 : 0);
    const fixedW = costW + mktW + tgtW + (showUnit ? UNIT_W : 0) + (showDate ? DATE_W : 0) + CGAP * (nCols - 1);
@@ -728,7 +743,7 @@ export default function AdminPricing() {
                   <span key={d.h} title={d.get(item) || ''} style={{ ...wrapS, textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center', ...d.st, ...(d.get(item) ? {} : { color: '#cbd5e1' }) }}>{properCase(d.get(item) || '—')}</span>
                  ))}
                  {hasCost && <span style={{ fontSize: 13, fontWeight: 400, color: '#475569', whiteSpace: 'nowrap', textAlign: 'center' }}>{item.cost != null ? `₹${Number(item.cost).toLocaleString()}` : '—'}</span>}
-                 <span style={{ fontSize: 18, fontWeight: 400, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'center' }}>₹{item.price.toLocaleString()}</span>
+                 <span style={{ fontSize: 18, fontWeight: 400, color: '#15803d', letterSpacing: -0.3, whiteSpace: 'nowrap', textAlign: 'center' }}>₹{item.price.toLocaleString()}<TrendArrow item={item} /></span>
                  {hasTarget && <span style={{ fontSize: 13, fontWeight: 400, color: '#7c3aed', whiteSpace: 'nowrap', textAlign: 'center' }}>{tgtOf(item) ? `₹${tgtOf(item)}` : '—'}</span>}
                  {showUnit && <span style={{ fontSize: 11, fontWeight: 400, color: '#0369a1', background: '#e0f2fe', borderRadius: 4, textAlign: 'center', padding: '1px 0' }}>{properCase(item.product.unit)}</span>}
                  {showDate && <span style={{ fontSize: 11, fontWeight: 400, color: '#b45309', whiteSpace: 'nowrap', textAlign: 'center' }}>{fmtDate(item.updatedAt || item.date) || ''}</span>}
