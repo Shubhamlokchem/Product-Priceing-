@@ -1,19 +1,27 @@
 // Target price range helpers.
-// Default target = market + 2.5%  to  market + 5%   (one decimal: market 10 → "10.3 - 10.5", market 100 → "102.5 - 105").
+// Default target = market + 2.5%  to  market + 5%, rounded to a whole rupee or .5 (market 93 → "95 - 98", market 100 → "102.5 - 105").
 // A target typed by the admin is stored and used instead of the default.
 export const TARGET_MIN_PCT = 2.5;   // % added to market for the low end
 export const TARGET_MAX_PCT = 5;     // % added to market for the high end
 
 const fmtN = n => String(Math.round(Number(n) * 100) / 100);
 const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
-// market + pct%, rounded to ONE decimal place, without floating-point drift (10 + 2.5% = 10.3, 93 + 2.5% = 95.3)
-const addPct = (m, pct) => Math.round((m * Math.round((100 + pct) * 10)) / 100) / 10;
+// market + pct%, then rounded the way the sales team wants:
+//   below .5  → drop the decimal   (338.3 → 338)
+//   exactly .5 → keep it           (338.5 → 338.5)
+//   above .5  → next rupee         (338.6 → 339)
+const addPct = (m, pct) => {
+  const t = Math.round(m * Math.round((100 + pct) * 10) * 10);   // value in 1/10000 of a rupee (no floating-point drift)
+  const whole = Math.floor(t / 10000), frac = t - whole * 10000;
+  return frac < 5000 ? whole : frac === 5000 ? whole + 0.5 : whole + 1;
+};
 
-// "10.3 - 10.5" for a market price, '' when there is no market price
+// "95 - 98" for a market price, '' when there is no market price
 export const defaultTarget = market => {
   if (!isNum(market) || Number(market) <= 0) return '';
   const m = Number(market);
-  return `${fmtN(addPct(m, TARGET_MIN_PCT))} - ${fmtN(addPct(m, TARGET_MAX_PCT))}`;
+  const lo = fmtN(addPct(m, TARGET_MIN_PCT)), hi = fmtN(addPct(m, TARGET_MAX_PCT));
+  return lo === hi ? lo : `${lo} - ${hi}`;   // very small prices can round to the same number
 };
 
 // Stored numbers → text ("12 - 15", or "12" when both ends are the same).

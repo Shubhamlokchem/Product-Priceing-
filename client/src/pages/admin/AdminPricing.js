@@ -5,7 +5,47 @@ import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '07 Oct 2026 · 4:30 pm (conditions line on top, live ribbon at bottom)';
+const BOARD_VERSION = '07 Oct 2026 · 5:15 pm (screen stays awake, target rounding)';
+
+// Keep the TV / monitor awake while a price board is open (no mouse or keyboard activity needed).
+// 1) Screen Wake Lock (Chrome, Edge, newer smart-TV browsers)  2) fallback: a tiny silent looping video,
+// which stops most other browsers from dimming or sleeping.
+function useKeepAwake(active) {
+ useEffect(() => {
+  if (!active) return undefined;
+  let lock = null, video = null, timer = null, stopped = false;
+  const request = async () => {
+   try {
+    if (!stopped && 'wakeLock' in navigator && document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen');
+   } catch { /* not allowed right now — the video fallback below still runs */ }
+  };
+  const onVisible = () => { if (document.visibilityState === 'visible') { request(); video?.play?.().catch(() => {}); } };
+  request();
+  try {
+   const canvas = document.createElement('canvas'); canvas.width = 2; canvas.height = 2;
+   const ctx = canvas.getContext('2d');
+   if (canvas.captureStream && ctx) {
+    timer = setInterval(() => { ctx.fillStyle = ctx.fillStyle === '#000001' ? '#000000' : '#000001'; ctx.fillRect(0, 0, 2, 2); }, 1000);
+    video = document.createElement('video');
+    video.muted = true; video.playsInline = true; video.setAttribute('playsinline', ''); video.loop = true;
+    video.srcObject = canvas.captureStream(1);
+    Object.assign(video.style, { position: 'fixed', width: '1px', height: '1px', opacity: '0.01', bottom: '0', right: '0', pointerEvents: 'none', zIndex: '1' });
+    document.body.appendChild(video);
+    video.play().catch(() => {});
+   }
+  } catch { /* fallback not available */ }
+  document.addEventListener('visibilitychange', onVisible);
+  document.addEventListener('fullscreenchange', onVisible);
+  return () => {
+   stopped = true;
+   document.removeEventListener('visibilitychange', onVisible);
+   document.removeEventListener('fullscreenchange', onVisible);
+   if (timer) clearInterval(timer);
+   try { lock?.release?.(); } catch { /* already released */ }
+   try { video?.pause(); video?.remove(); } catch { /* ignore */ }
+  };
+ }, [active]);
+}
 
 // Text columns that read better left aligned on the TV boards
 const LEFT_COLS = new Set(['PRODUCT', 'MAKE', 'ORIGIN', 'EX']);
@@ -258,6 +298,7 @@ export default function AdminPricing() {
  const [productSearch, setProductSearch] = useState('');
  const [tvMode, setTvMode] = useState(false);   // TV 1: Price Board
  const [tv2Mode, setTv2Mode] = useState(false); // TV 2: Price Board 2 (airport style)
+ useKeepAwake(tvMode || tv2Mode);                // the screen must not sleep while a board is showing
  const TV2_PAGE_SEC = 15;
  const [tv2Page, setTv2Page] = useState(0);
  const [tv2Countdown, setTv2Countdown] = useState(TV2_PAGE_SEC);
