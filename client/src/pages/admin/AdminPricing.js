@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
-// Target shown everywhere: saved range if the admin typed one, otherwise market +₹2 to +₹5
+// Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
 // Text columns that read better left aligned on the TV boards
 const LEFT_COLS = new Set(['PRODUCT', 'MAKE', 'ORIGIN', 'EX']);
 const tgtOf = it => targetText(it.target, it.targetMax, it.price);
@@ -153,6 +153,18 @@ function PriceTicker({ items, notice = '' }) {
     {run}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{run}
    </div>
    <style>{`@keyframes ticker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}`}</style>
+  </div>
+ );
+}
+
+/* ── Price conditions: one thin fixed line above the ribbon on both TV boards (not a column) ── */
+const PRICE_TERMS = ['Subject to payment & delivery terms', 'Subject to relation with customer', 'Subject to last price to customer'];
+const TERMS_H = 24;
+function PriceTerms() {
+ return (
+  <div style={{ height: TERMS_H, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 26, padding: '0 12px', background: '#061a3d', borderTop: '1px solid rgba(147,197,253,0.25)', color: '#dbeafe', fontSize: 12.5, fontWeight: 600, letterSpacing: 0.2, whiteSpace: 'nowrap', overflow: 'hidden' }}>
+   <span style={{ color: '#fcd34d', fontWeight: 800, letterSpacing: 1, fontSize: 11 }}>PRICES ARE</span>
+   {PRICE_TERMS.map(t => <span key={t}><span style={{ color: '#fcd34d', marginRight: 4 }}>*</span>{t}</span>)}
   </div>
  );
 }
@@ -372,7 +384,7 @@ export default function AdminPricing() {
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
   const HDR_H = 56, COLHDR_H = 28, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
   const TICK_H = 34;
-  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - 12;
+  const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - TERMS_H - 12;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
   const twoCols = false;
   // At least 25 products per screen: rows shrink to fit on small screens, stay 34px where there is room
@@ -472,6 +484,7 @@ export default function AdminPricing() {
      ))}
     </div>
 
+    <PriceTerms />
     {/* Ticker (same as Price Board 1) */}
     <div style={{ height: TICK_H, flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
      <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '8px 14px', zIndex: 1 }}>● LIVE</span>
@@ -505,7 +518,7 @@ export default function AdminPricing() {
   const TICKER_H  = 40;
   const DOTS_H    = 24;
   const PAD_V     = 16;
-  const availH = window.innerHeight - TOP_BAR_H - TICKER_H - DOTS_H - PAD_V;
+  const availH = window.innerHeight - TOP_BAR_H - TICKER_H - TERMS_H - DOTS_H - PAD_V;
 
   // Card height depends on its rows → pack cards into 5 columns, new page when full
   const HEAD_H = 32, ROW_H = 28, ROW_H2L = 40;   // row grows to 2 lines when text needs it
@@ -679,6 +692,7 @@ export default function AdminPricing() {
       </>}
     </div>
 
+    <PriceTerms />
     {/* ── Ticker ── */}
     <div style={{ flexShrink: 0, background: 'linear-gradient(90deg, #f59e0b, #fbbf24)', borderTop: '2px solid #fcd34d', display: 'flex', alignItems: 'center' }}>
      <span style={{ flexShrink: 0, background: '#0b3f8c', color: '#fff', fontSize: 12, fontWeight: 900, letterSpacing: 1, padding: '10px 14px', zIndex: 1 }}>● LIVE</span>
