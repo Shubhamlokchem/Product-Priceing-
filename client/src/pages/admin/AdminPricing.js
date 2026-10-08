@@ -6,7 +6,7 @@ import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '07 Oct 2026 · 6:00 pm (price up / down arrows)';
+const BOARD_VERSION = '08 Oct 2026 · 10:45 am (cost removed)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
@@ -81,7 +81,7 @@ const REFRESH_SEC = 7;
 
 // Proper case for TV boards: "ADIPIC ACID" -> "Adipic Acid", "1-BROMO 3-CHLORO" -> "1-Bromo 3-Chloro".
 // Short codes stay in capitals (USA, UK, BASF, KH, PVC …); numbers / % / ₹ are untouched.
-const KEEP_CAPS = new Set(['USA','UK','UAE','EU','KSA','BASF','KH','LG','SK','SKC','INEOS','PVC','PET','HDPE','LDPE','LLDPE','PP','PE','MEG','DEG','TEG','IPA','MEK','DMF','DMSO','THF','EDTA','PEG','PPG','LAB','LABSA','SLES','SLS','CAS','HSN','FOB','CIF','CFR','EXW','GST','DCS','LR','AR','IP','BP','USP','EP','NF','JP']);
+const KEEP_CAPS = new Set(['ISO','USA','UK','UAE','EU','KSA','BASF','KH','LG','SK','SKC','INEOS','PVC','PET','HDPE','LDPE','LLDPE','PP','PE','MEG','DEG','TEG','IPA','MEK','DMF','DMSO','THF','EDTA','PEG','PPG','LAB','LABSA','SLES','SLS','CAS','HSN','FOB','CIF','CFR','EXW','GST','DCS','LR','AR','IP','BP','USP','EP','NF','JP']);
 const properCase = (v) => String(v ?? '').replace(/[A-Za-z][A-Za-z']*/g, w => {
  const up = w.toUpperCase();
  if (KEEP_CAPS.has(up)) return up;
@@ -178,8 +178,8 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
 // Internal office display (team-facing). Shown only when no product is starred ⭐ in Manage Products.
 const RIBBON_MESSAGES = [
  'Good day, Team Lok Chemicals!',
- 'Update today\'s Cost, Market & Target prices in Manage Products before quoting',
- 'Check Cost vs Target before every quote — protect our margin',
+ 'Update today\'s Market & Target prices in Manage Products before quoting',
+ 'Check the Target range before every quote — protect our margin',
  'Market prices move fast — confirm the latest rate with Purchase before committing',
  'Star ⭐ priority products in Manage Products to show them on this ribbon',
  'Reply to open customer queries on time — every quick reply builds trust',
@@ -412,13 +412,13 @@ export default function AdminPricing() {
  const toggleProduct = id => setFilterProducts(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
  const exportPrices = () => {
-  const headers = ['group','make','origin','grade','purity','package','unit',...(isAdmin ? ['cost'] : []),'market','target','notes','ex','date'];
+  const headers = ['group','make','origin','grade','purity','package','unit','market','target','notes','ex','date'];
   const rows = displayItems
    .filter(i => i.price !== null)
    .map(i => [
     i.product.group, i.product.make||'', i.product.coo||'', i.product.grade||'',
     i.product.purity||'', i.product.itemPackage||'', i.product.unit||'',
-    ...(isAdmin ? [i.cost ?? ''] : []), i.price, tgtOf(i), i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
+    i.price, tgtOf(i), i.notes||'', i.ex||'', fmtDate(i.updatedAt||i.date)||date,
    ]);
   const lines = [headers, ...rows].map(r =>
    r.map(v => `"${String(v??'').replace(/"/g,'""')}"`).join(',')
@@ -910,7 +910,7 @@ export default function AdminPricing() {
     <div className="card"><div className="empty-state"><p style={{ fontSize: 13 }}>No prices available.</p></div></div>
    ) : (
     Object.entries(grouped).map(([group, groupItems]) => (
-     <GroupRow key={group} group={group} groupItems={groupItems} showCost={isAdmin} />
+     <GroupRow key={group} group={group} groupItems={groupItems} showCost={false} />
     ))
    )}
   </div>

@@ -21,7 +21,8 @@ router.get('/latest', protect, async (req, res) => {
     lastTwo.forEach(x => { lastTwoMap[String(x._id)] = x.rows; });
     const result = await Promise.all(products.map(async (product) => {
       const latest = await PriceEntry.findOne({ product: product._id }).sort({ date: -1 }).lean();
-      const prev = latest ? (lastTwoMap[String(product._id)] || []).find(x => x.date < latest.date) : null;
+      const prev = latest?.sameDayPrev != null ? { price: latest.sameDayPrev, date: latest.date }
+        : latest ? (lastTwoMap[String(product._id)] || []).find(x => x.date < latest.date) : null;
       return hideInternal(req, {
         prevPrice: prev?.price ?? null,
         prevDate:  prev?.date  ?? null,
@@ -64,7 +65,8 @@ router.get('/date/:date', protect, async (req, res) => {
 
     const result = products.map(product => {
       const entry = entryMap[product._id.toString()];
-      const prev = entry ? prevMap[product._id.toString()] : null;
+      const prev = entry?.sameDayPrev != null ? { price: entry.sameDayPrev, date: req.params.date }
+        : entry ? prevMap[product._id.toString()] : null;
       return hideInternal(req, {
         prevPrice: prev?.price ?? null,
         prevDate:  prev?.date  ?? null,
@@ -201,17 +203,24 @@ router.get('/available-dates', protect, async (req, res) => {
 // Admin: Set/update single price
 
 // Admin: Set/update single price
+// Save one product's price for a date. If the market price is changed again on the same day,
+// the earlier value is kept as sameDayPrev so the up / down arrow reacts straight away.
+const savePrice = async (productId, date, fields) => {
+  const existing = await PriceEntry.findOne({ product: productId, date }).lean();
+  let sameDayPrev = existing?.sameDayPrev ?? null;
+  if (existing && existing.price != null && fields.price != null && Number(existing.price) !== Number(fields.price)) sameDayPrev = existing.price;
+  return PriceEntry.findOneAndUpdate({ product: productId, date }, { ...fields, sameDayPrev }, { upsert: true, new: true });
+};
+
 router.post('/', protect, adminOnly, async (req, res) => {
   try {
     const { productId, price, date, currency, notes, ex, cost, target, targetMax } = req.body;
     if (!productId || price === undefined || !date)
       return res.status(400).json({ message: 'productId, price and date are required' });
 
-    const entry = await PriceEntry.findOneAndUpdate(
-      { product: productId, date },
-      { price: numOrNull(price), cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
-      { upsert: true, new: true }
-    ).populate('product');
+    const saved = await savePrice(productId, date,
+      { price: numOrNull(price), cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id });
+    const entry = await PriceEntry.findById(saved._id).populate('product');
     res.json(entry);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -228,11 +237,8 @@ router.post('/bulk', protect, adminOnly, async (req, res) => {
     const results = await Promise.all(
       prices.map(({ productId, price, notes, currency, ex, cost, target, targetMax }) => {
         const priceValue = (price !== null && price !== undefined && !isNaN(price)) ? price : null;
-        return PriceEntry.findOneAndUpdate(
-          { product: productId, date },
-          { price: priceValue, cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id },
-          { upsert: true, new: true }
-        );
+        return savePrice(productId, date,
+          { price: priceValue, cost: numOrNull(cost), target: numOrNull(target), targetMax: numOrNull(targetMax), currency: currency || 'INR', notes: notes || '', ex: ex || '', updatedBy: req.user.id });
       })
     );
     res.json({ message: `${results.length} prices updated for ${date}`, count: results.length });

@@ -20,7 +20,7 @@ const fmtDate = (d) => {
  if (!d) return null;
  return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }); // "07 Sep"
 };
-const UNITS = ['kg', 'mt', 'drum', 'tanker', 'litre', 'piece', 'pack', 'bag', 'bottle'];
+const UNITS = ['kg', 'mt', 'drum', 'tanker', 'ISO Tank', 'litre', 'piece', 'pack', 'bag', 'bottle'];
 const EX_LOCATIONS = ['Kandla', 'Mundra', 'Nava Sheva', 'Hazira', 'Chennai', 'Bhiwandi'];
 
 // SVG icon components
@@ -181,11 +181,10 @@ export default function AdminProducts() {
  try {
  const { data: newProduct } = await api.post('/products', { ...inlineForm, group });
  // Save price for selected date if entered
- if ((inlineForm.price && !isNaN(Number(inlineForm.price))) || inlineForm.cost || inlineForm.target) {
+ if ((inlineForm.price && !isNaN(Number(inlineForm.price))) || inlineForm.target) {
   await api.post('/prices', {
    productId: newProduct._id,
    price: inlineForm.price !== '' ? Number(inlineForm.price) : null,
-   cost: inlineForm.cost || null,
    ...parseTarget(inlineForm.target, inlineForm.price),
    notes: inlineForm.notes || '',
    ex: inlineForm.ex || '',
@@ -219,17 +218,17 @@ export default function AdminProducts() {
  try {
  const { data: newProduct } = await api.post('/products', addForm);
  // If a price was entered, save it for the selected date
- if ((addForm.price && !isNaN(Number(addForm.price))) || addForm.cost || addForm.target) {
+ if ((addForm.price && !isNaN(Number(addForm.price))) || addForm.target || addForm.ex) {
   await api.post('/prices', {
    productId: newProduct._id,
    price: addForm.price !== '' ? Number(addForm.price) : null,
-   cost: addForm.cost || null,
    ...parseTarget(addForm.target, addForm.price),
    notes: addForm.notes || '',
+   ex: addForm.ex || '',
    date
   });
  }
- setMsg({ type: 'success', text: 'Product added' + (addForm.price || addForm.cost || addForm.target ? ' with prices' : '') });
+ setMsg({ type: 'success', text: 'Product added' + (addForm.price || addForm.target ? ' with prices' : '') });
  setAddForm(EMPTY); setShowAddForm(false); setNewGroupMode(false);
  loadData(true);
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Add failed' }); }
@@ -310,17 +309,17 @@ export default function AdminProducts() {
 
  // Export all products + their prices for the selected date (re-upload this file to update prices)
  const exportProducts = () => {
-  const headers = ['id','group','make','origin','grade','purity','package','unit','cost','market','target','ex','notes'];
+  const headers = ['id','group','make','origin','grade','purity','package','unit','market','target','ex','notes'];
   const rows = products.map(p => {
    const e = priceMap[p._id] || {};
    return [p._id, p.group, p.make||'', p.coo||'', p.grade||'', p.purity||'', p.itemPackage||'', p.unit||'kg',
-    e.cost ?? '', e.price ?? '', e.target || defaultTarget(e.price), e.ex || '', e.notes || ''];
+    e.price ?? '', e.target || defaultTarget(e.price), e.ex || '', e.notes || ''];
   });
   downloadCSV(headers, rows, `products-${date}.csv`);
  };
 
  const downloadSampleCSV = () => {
-  const sample = `group,make,origin,grade,purity,package,unit,cost,market,target\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,95,110,130 - 160\nACETONE,SHELL,Netherlands,,,,litre,,82,\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
+  const sample = `group,make,origin,grade,purity,package,unit,market,target,ex\nCITRIC ACID,JUNGBUNZLAUER,Germany,Food Grade,99.5%,25kg Bag,kg,110,,Bhiwandi\nACETONE,SHELL,Netherlands,,,,litre,82,,Hazira\nSODIUM HYDROXIDE,BASF,Germany,Technical,,200kg Drum,kg,,,`;
   const blob = new Blob([sample], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'sample-products.csv'; a.click(); URL.revokeObjectURL(a.href);
  };
 
@@ -373,7 +372,7 @@ export default function AdminProducts() {
    const seenNew = new Set(), seenIds = new Set();
    rows.forEach(row => {
     const prod = (row.id && byId[row.id]) || byKey[keyOf(row)];
-    const nums = { cost: toNum(row.cost), price: toNum(row.market ?? row.price), target: null };
+    const nums = { cost: null, price: toNum(row.market ?? row.price), target: null };   // cost is no longer used — any cost column is ignored
     // target can be a range ("12 - 15") or one number; blank = no change; same as the default = automatic
     if (String(row.target ?? '').trim()) {
      const mkt = nums.price ?? (prod ? priceMap[prod._id]?.price : null);
@@ -392,7 +391,7 @@ export default function AdminProducts() {
     const changes = [];
     const newUnit = (row.unit || '').trim();
     if (newUnit && norm(newUnit) !== norm(prod.unit)) changes.push({ f: 'Unit', from: prod.unit, to: newUnit });
-    [['cost','Cost'],['price','Market']].forEach(([k, label]) => {
+    [['price','Market']].forEach(([k, label]) => {
      if (nums[k] !== null && !sameNum(cur[k], nums[k])) changes.push({ f: label, from: cur[k] === '' || cur[k] == null ? '—' : cur[k], to: nums[k] });
     });
     if (nums.target !== null && nums.target !== (cur.target || '')) changes.push({ f: 'Target', from: cur.target || 'Auto', to: nums.target || 'Auto' });
@@ -424,8 +423,8 @@ export default function AdminProducts() {
      grade: row.grade||'', purity: row.purity||'',
      itemPackage: row.package||row.itempackage||'', unit: row.unit||'kg',
     });
-    if (row.price !== null || row.cost !== null || row.target !== null)
-     bulk.push({ productId: np._id, price: row.price, cost: row.cost, ...parseTarget(row.target, row.price), ex: row.ex || '', notes: row.notes || '' });
+    if (row.price !== null || row.target !== null || row.ex)
+     bulk.push({ productId: np._id, price: row.price, ...parseTarget(row.target, row.price), ex: row.ex || '', notes: row.notes || '' });
     ok++;
    } catch { failed++; }
    tick();
@@ -798,10 +797,13 @@ export default function AdminProducts() {
        style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 75 }}>
        {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
       </select>
-      {/* Prices (optional): 1. Cost  2. Market  3. Target */}
-      <input value={addForm.cost} onChange={e => setAddForm(f => ({ ...f, cost: e.target.value }))}
-       placeholder="Cost ₹" type="number" min="0" step="0.01"
-       style={{ padding: '6px 9px', border: '1.5px solid #cbd5e1', borderRadius: 7, fontSize: 12, width: 85 }} />
+      {/* EX (delivery location) */}
+      <select value={addForm.ex} onChange={e => setAddForm(f => ({ ...f, ex: e.target.value }))} title="EX (delivery location)"
+       style={{ padding: '6px 9px', border: '1.5px solid #c7d7fa', borderRadius: 7, fontSize: 12, width: 105, color: addForm.ex ? '#1a3a6b' : '#9ca3af', background: '#fff' }}>
+       <option value="">EX…</option>
+       {EX_LOCATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+      </select>
+      {/* Prices (optional): 1. Market  2. Target */}
       <input value={addForm.price} onChange={e => setAddForm(f => ({ ...f, price: e.target.value }))}
        placeholder="Market ₹" type="number" min="0" step="0.01"
        style={{ padding: '6px 9px', border: '1.5px solid #f59e0b', borderRadius: 7, fontSize: 12, width: 90, background: '#fffbeb' }} />
@@ -867,7 +869,7 @@ export default function AdminProducts() {
  <tr>
  <th style={{ width: 32, padding: '8px 6px' }} />
  <th>Make</th><th>Origin</th><th>EX</th><th>Grade</th><th>Purity</th><th style={{ whiteSpace: 'nowrap' }}>Pkg</th><th>Unit</th>
- <th style={{ color: '#64748b', whiteSpace: 'nowrap' }}>Cost (₹)</th><th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Last Update</th><th style={{ width: 120 }}>Actions</th>
+ <th style={{ color: '#e8a020', whiteSpace: 'nowrap' }}>Market (₹) *</th><th style={{ color: '#7c3aed', whiteSpace: 'nowrap' }}>Target (₹)</th><th>Notes</th><th style={{ whiteSpace: 'nowrap' }}>Last Update</th><th style={{ width: 120 }}>Actions</th>
  </tr>
  </thead>
  <tbody>
@@ -940,13 +942,6 @@ export default function AdminProducts() {
  </td>
  </>
  )}
- {/* Cost input */}
- <td>
- <input type="number" step="0.01" min="0" className="price-input" placeholder="—"
-  value={priceMap[p._id]?.cost ?? ''} title="Our cost price"
-  style={{ borderColor: '#cbd5e1', background: priceMap[p._id]?.isLatest && priceMap[p._id]?.cost !== '' ? '#fffbeb' : undefined }}
-  onChange={e => handlePrice(p._id, 'cost', e.target.value)} />
- </td>
  {/* Market price input — always editable */}
  <td>
  <input type="number" step="0.01" min="0" className="price-input"
@@ -1044,10 +1039,6 @@ export default function AdminProducts() {
              style={{ padding: '4px 6px', border: '1.5px solid #16a34a', borderRadius: 6, fontSize: 12 }}>
              {UNITS.map(u => <option key={u}>{u}</option>)}
             </select>
-           </td>
-           <td>
-            <input type="number" min="0" step="0.01" placeholder="Cost ₹" value={inlineForm.cost || ''} onChange={e => setInlineForm(f => ({ ...f, cost: e.target.value }))}
-             style={{ width: 75, padding: '4px 6px', border: '1.5px solid #cbd5e1', borderRadius: 6, fontSize: 12 }} />
            </td>
            <td>
             <input type="number" min="0" step="0.01" placeholder="Market ₹" value={inlineForm.price} onChange={e => setInlineForm(f => ({ ...f, price: e.target.value }))}

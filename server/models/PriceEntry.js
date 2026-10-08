@@ -6,6 +6,7 @@ const priceEntrySchema = new mongoose.Schema({
   cost:      { type: Number, default: null },    // our cost
   target:    { type: Number, default: null },    // target price (low end of the range)
   targetMax: { type: Number, default: null },    // target price (high end of the range)
+  sameDayPrev: { type: Number, default: null },  // market price before it was changed again on the same day (for the up / down arrow)
   currency:  { type: String, default: 'INR' },
   date:      { type: String, required: true }, // YYYY-MM-DD
   notes:     { type: String, default: '' },
