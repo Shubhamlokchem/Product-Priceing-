@@ -1,17 +1,15 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import AdminPricing from './admin/AdminPricing';
-import AdminHistory from './admin/AdminHistory';
-import PriceCompare from './PriceCompare';
-import UserQuery from './UserQuery';
+import AdminProducts from './admin/AdminProducts';
+import AdminQueries from './admin/AdminQueries';
 import './Dashboard.css';
 
-// User panel: the same pages and look as the admin panel, but view only.
-// No Manage Products, no Create / Manage IDs. Users can send queries.
+// User panel: only Dashboard, Manage Products and Queries — with the same rights as admin on these pages
+// (edit, delete, import, export, ribbon, reply to queries). No Price History, Compare Prices or Create / Manage IDs.
 const links = [
  { to: '/dashboard', label: 'Dashboard', icon: '' },
- { to: '/dashboard/history', label: 'Price History', icon: '' },
- { to: '/dashboard/compare', label: 'Compare Prices', icon: '' },
+ { to: '/dashboard/products', label: 'Manage Products', icon: '' },
  { to: '/dashboard/queries', label: 'Queries', icon: '' },
 ];
 
@@ -22,9 +20,8 @@ export default function UserDashboard() {
  <main className="dashboard-main">
  <Routes>
  <Route index element={<AdminPricing />} />
- <Route path="history" element={<AdminHistory />} />
- <Route path="compare" element={<PriceCompare adminMode />} />
- <Route path="queries" element={<UserQuery />} />
+ <Route path="products" element={<AdminProducts />} />
+ <Route path="queries" element={<AdminQueries />} />
  <Route path="*" element={<Navigate to="/dashboard" replace />} />
  </Routes>
  </main>

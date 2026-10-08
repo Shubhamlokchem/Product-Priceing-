@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const Query  = require('../models/Query');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
+// Users (non-admins) have the same rights as admins on Dashboard, Manage Products and Queries.
+// Only account management (Create / Manage IDs) stays admin-only.
 
 // User: submit a query
 router.post('/', protect, async (req, res) => {
@@ -23,7 +25,7 @@ router.get('/mine', protect, async (req, res) => {
 });
 
 // Admin: get all queries
-router.get('/', protect, adminOnly, async (req, res) => {
+router.get('/', protect, async (req, res) => {
   try {
     const queries = await Query.find()
       .sort({ createdAt: -1 })
@@ -34,7 +36,7 @@ router.get('/', protect, adminOnly, async (req, res) => {
 });
 
 // Admin: reply to a query
-router.put('/:id/reply', protect, adminOnly, async (req, res) => {
+router.put('/:id/reply', protect, async (req, res) => {
   try {
     const { reply } = req.body;
     if (!reply) return res.status(400).json({ message: 'Reply text is required' });

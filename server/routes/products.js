@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const Product = require('../models/Product');
 const { protect, adminOnly } = require('../middleware/auth');
+// Users (non-admins) have the same rights as admins on Dashboard, Manage Products and Queries.
+// (Reseeding the product list stays admin-only.) Only account management (Create / Manage IDs) stays admin-only.
 
 // Admin: Force re-seed
 router.post('/reseed', protect, adminOnly, async (req, res) => {
@@ -35,7 +37,7 @@ router.get('/groups', protect, async (req, res) => {
 });
 
 // Admin: Bulk soft-delete in ONE request  → POST /products/bulk-delete { ids: [...] }
-router.post('/bulk-delete', protect, adminOnly, async (req, res) => {
+router.post('/bulk-delete', protect, async (req, res) => {
   try {
     const ids = Array.isArray(req.body.ids) ? req.body.ids : [];
     if (!ids.length) return res.status(400).json({ message: 'No products selected' });
@@ -47,7 +49,7 @@ router.post('/bulk-delete', protect, adminOnly, async (req, res) => {
 });
 
 // Admin: Bulk field update in ONE request → POST /products/bulk-update { ids: [...], field, value }
-router.post('/bulk-update', protect, adminOnly, async (req, res) => {
+router.post('/bulk-update', protect, async (req, res) => {
   try {
     const { ids, field, value } = req.body;
     const allowed = ['make', 'coo', 'grade', 'purity', 'itemPackage', 'unit'];
@@ -72,7 +74,7 @@ router.get('/:id', protect, async (req, res) => {
 });
 
 // Create product - admin only
-router.post('/', protect, adminOnly, async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
     const { group, name, make, coo, grade, purity, itemPackage, unit } = req.body;
     if (!group) return res.status(400).json({ message: 'Chemical group is required' });
@@ -90,7 +92,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 });
 
 // Update product - admin only
-router.put('/:id', protect, adminOnly, async (req, res) => {
+router.put('/:id', protect, async (req, res) => {
   try {
     const allowed = ['group', 'name', 'make', 'coo', 'grade', 'purity', 'itemPackage', 'unit', 'starred'];
     const update = {};
@@ -106,7 +108,7 @@ router.put('/:id', protect, adminOnly, async (req, res) => {
 });
 
 // Soft delete - admin only
-router.delete('/:id', protect, adminOnly, async (req, res) => {
+router.delete('/:id', protect, async (req, res) => {
   try {
     await Product.findByIdAndUpdate(req.params.id, { isActive: false });
     res.json({ message: 'Product removed' });

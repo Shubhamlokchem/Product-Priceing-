@@ -1,12 +1,11 @@
 import { Fragment, useState, useEffect, useCallback, useRef } from 'react';
 import NoSleep from 'nosleep.js';
 import api from '../../api/axios';
-import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '08 Oct 2026 · 11:00 am (target 2% to 5%)';
+const BOARD_VERSION = '08 Oct 2026 · 2:40 pm (user panel: 3 pages, full rights)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
@@ -307,8 +306,6 @@ function GroupRow({ group, groupItems, showCost = true }) {
 }
 
 export default function AdminPricing() {
- const { user: authUser } = useAuth();
- const isAdmin = authUser?.role === 'admin';   // users get the same page, view only (no cost, no ribbon editing)
  const today = new Date().toLocaleDateString('en-CA'); // local date (IST), YYYY-MM-DD
  const [date, setDate] = useState(today);
  const [items, setItems] = useState([]);
@@ -854,7 +851,7 @@ export default function AdminPricing() {
        {[
         { icon: '↓', label: 'Export CSV', color: '#16a34a', bg: '#f0fdf4', act: () => { setShowMenu(false); exportPrices(); } },
         { icon: '↻', label: 'Refresh', color: '#1d58a8', bg: '#eff6ff', act: () => { setShowMenu(false); loadData(); } },
-        isAdmin && { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
+        { icon: '📢', label: 'Ribbon announcement', color: '#92400e', bg: '#fef3c7', dot: !!ribbonText, act: () => { setRibbonDraft(ribbonText); setShowMenu(false); setShowRibbonEd(true); } },
         { icon: '📺', label: 'Price Board 1', color: '#0b3f8c', bg: '#e0ecff', sep: true, act: () => { keepAwakeOn(); setShowMenu(false); setTvMode(true); } },
         { icon: '✈️', label: 'Price Board 2', color: '#0e7490', bg: '#e0f7fd', act: () => { keepAwakeOn(); setShowMenu(false); setTv2Mode(true); } },
        ].filter(Boolean).map(it => (

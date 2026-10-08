@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const Setting = require('../models/Setting');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
+// Users (non-admins) have the same rights as admins on Dashboard, Manage Products and Queries.
+// Only account management (Create / Manage IDs) stays admin-only.
 
 // TV ribbon announcement (one message per line)
 router.get('/ribbon', protect, async (req, res) => {
@@ -10,7 +12,7 @@ router.get('/ribbon', protect, async (req, res) => {
   } catch (err) { res.status(500).json({ message: err.message }); }
 });
 
-router.put('/ribbon', protect, adminOnly, async (req, res) => {
+router.put('/ribbon', protect, async (req, res) => {
   try {
     const text = String(req.body.text ?? '').slice(0, 2000);
     const s = await Setting.findOneAndUpdate(

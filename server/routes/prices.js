@@ -1,7 +1,9 @@
 const router = require('express').Router();
 const PriceEntry = require('../models/PriceEntry');
 const Product = require('../models/Product');
-const { protect, adminOnly } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
+// Users (non-admins) have the same rights as admins on Dashboard, Manage Products and Queries.
+// Only account management (Create / Manage IDs) stays admin-only.
 const numOrNull = v => (v !== null && v !== undefined && v !== '' && !isNaN(v)) ? Number(v) : null;
 // Cost is internal — only admins receive it. Users get market + target (view only).
 const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; } return obj; };
@@ -223,7 +225,7 @@ const savePrice = async (productId, date, fields) => {
   return PriceEntry.findOneAndUpdate({ product: productId, date }, { ...fields, sameDayPrev }, { upsert: true, new: true });
 };
 
-router.post('/', protect, adminOnly, async (req, res) => {
+router.post('/', protect, async (req, res) => {
   try {
     const { productId, price, date, currency, notes, ex, cost, target, targetMax } = req.body;
     if (!productId || price === undefined || !date)
@@ -239,7 +241,7 @@ router.post('/', protect, adminOnly, async (req, res) => {
 });
 
 // Admin: Bulk update prices for a date
-router.post('/bulk', protect, adminOnly, async (req, res) => {
+router.post('/bulk', protect, async (req, res) => {
   try {
     const { date, prices } = req.body;
     if (!date || !Array.isArray(prices))
