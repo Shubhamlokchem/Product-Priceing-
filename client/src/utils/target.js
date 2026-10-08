@@ -6,14 +6,15 @@ export const TARGET_MAX_PCT = 5;     // % added to market for the high end
 
 const fmtN = n => String(Math.round(Number(n) * 100) / 100);
 const isNum = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
-// market + pct%, then rounded the way the sales team wants:
-//   below .5  → drop the decimal   (338.3 → 338)
-//   exactly .5 → keep it           (338.5 → 338.5)
-//   above .5  → next rupee         (338.6 → 339)
+// market + pct%, then rounded by the FIRST digit after the decimal point (the sales team's rule):
+//   .0 – .4  → drop the decimal   (22.1 … 22.4 → 22)
+//   .5       → keep .5            (22.5, 22.55 → 22.5)
+//   .6 – .9  → next rupee         (22.6 … 22.9 → 23)
 const addPct = (m, pct) => {
   const t = Math.round(m * Math.round((100 + pct) * 10) * 10);   // value in 1/10000 of a rupee (no floating-point drift)
-  const whole = Math.floor(t / 10000), frac = t - whole * 10000;
-  return frac < 5000 ? whole : frac === 5000 ? whole + 0.5 : whole + 1;
+  const whole = Math.floor(t / 10000);
+  const firstDigit = Math.floor((t - whole * 10000) / 1000);     // 0 … 9
+  return firstDigit < 5 ? whole : firstDigit === 5 ? whole + 0.5 : whole + 1;
 };
 
 // "95 - 98" for a market price, '' when there is no market price
