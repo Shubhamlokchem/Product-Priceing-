@@ -4,9 +4,9 @@ import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
 import { targetText } from '../../utils/target';
 import '../Dashboard.css';
-// Target shown everywhere: saved range if the admin typed one, otherwise market +2.5% to +5%
+// Target shown everywhere: saved range if the admin typed one, otherwise market +2% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '08 Oct 2026 · 10:45 am (cost removed)';
+const BOARD_VERSION = '08 Oct 2026 · 11:00 am (target 2% to 5%)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.

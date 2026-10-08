@@ -1,7 +1,7 @@
 // Target price range helpers.
-// Default target = market + 2.5%  to  market + 5%, rounded to a whole rupee or .5 (market 93 → "95 - 98", market 100 → "102.5 - 105").
+// Default target = market + 2%  to  market + 5%, rounded to a whole rupee or .5 (market 93 → "95 - 98", market 100 → "102.5 - 105").
 // A target typed by the admin is stored and used instead of the default.
-export const TARGET_MIN_PCT = 2.5;   // % added to market for the low end
+export const TARGET_MIN_PCT = 2;     // % added to market for the low end
 export const TARGET_MAX_PCT = 5;     // % added to market for the high end
 
 const fmtN = n => String(Math.round(Number(n) * 100) / 100);
