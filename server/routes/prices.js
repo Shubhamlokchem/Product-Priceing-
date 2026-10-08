@@ -6,23 +6,42 @@ const numOrNull = v => (v !== null && v !== undefined && v !== '' && !isNaN(v)) 
 // Cost is internal — only admins receive it. Users get market + target (view only).
 const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete obj.cost; } return obj; };
 
+// ── Previous market price (for the green ▲ / red ▼ arrow) ─────────────────────────
+// Looks through the whole price history, including products that were deleted and imported again:
+// the same product name + make (ignoring capital letters) counts as the same product.
+// If the price was changed again on the same day, that earlier value (sameDayPrev) is used first.
+const normTxt = v => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const buildPrevFinder = async () => {
+  const allProducts = await Product.find({}, { group: 1, make: 1 }).lean();
+  const keyOfId = {};
+  allProducts.forEach(p => { keyOfId[String(p._id)] = normTxt(p.group) + '|' + normTxt(p.make); });
+  const priced = await PriceEntry.find({ price: { $ne: null } }, { product: 1, date: 1, price: 1, updatedAt: 1 }).lean();
+  const byKey = {};
+  priced.forEach(e => { const k = keyOfId[String(e.product)]; if (k) (byKey[k] = byKey[k] || []).push(e); });
+  const stamp = e => `${e.date}|${new Date(e.updatedAt || 0).toISOString()}`;
+  return (productId, entry) => {
+    if (!entry || entry.price == null) return null;
+    if (entry.sameDayPrev != null) return { price: entry.sameDayPrev, date: entry.date };
+    const list = byKey[keyOfId[String(productId)]] || [];
+    const mine = stamp(entry);
+    let best = null;
+    for (const e of list) {
+      if (String(e._id) === String(entry._id)) continue;
+      const s2 = stamp(e);
+      if (s2 < mine && (!best || s2 > stamp(best))) best = e;
+    }
+    return best ? { price: best.price, date: best.date } : null;
+  };
+};
+
 // Get latest prices for all products
 router.get('/latest', protect, async (req, res) => {
   try {
     const products = await Product.find({ isActive: true });
-    // Two most recent priced days per product → the older one is the "previous price" (for the up / down arrow)
-    const lastTwo = await PriceEntry.aggregate([
-      { $match: { price: { $ne: null } } },
-      { $sort: { date: -1 } },
-      { $group: { _id: '$product', rows: { $push: { price: '$price', date: '$date' } } } },
-      { $project: { rows: { $slice: ['$rows', 2] } } },
-    ]);
-    const lastTwoMap = {};
-    lastTwo.forEach(x => { lastTwoMap[String(x._id)] = x.rows; });
+    const prevOf = await buildPrevFinder();
     const result = await Promise.all(products.map(async (product) => {
       const latest = await PriceEntry.findOne({ product: product._id }).sort({ date: -1 }).lean();
-      const prev = latest?.sameDayPrev != null ? { price: latest.sameDayPrev, date: latest.date }
-        : latest ? (lastTwoMap[String(product._id)] || []).find(x => x.date < latest.date) : null;
+      const prev = prevOf(product._id, latest);
       return hideInternal(req, {
         prevPrice: prev?.price ?? null,
         prevDate:  prev?.date  ?? null,
@@ -54,19 +73,11 @@ router.get('/date/:date', protect, async (req, res) => {
     const entryMap = {};
     entries.forEach(e => { if (e.product) entryMap[e.product._id.toString()] = e; });
 
-    // Last priced day before this date, per product → "previous price" (for the up / down arrow)
-    const before = await PriceEntry.aggregate([
-      { $match: { date: { $lt: req.params.date }, price: { $ne: null } } },
-      { $sort: { date: -1 } },
-      { $group: { _id: '$product', price: { $first: '$price' }, date: { $first: '$date' } } },
-    ]);
-    const prevMap = {};
-    before.forEach(x => { prevMap[String(x._id)] = x; });
+    const prevOf = await buildPrevFinder();
 
     const result = products.map(product => {
       const entry = entryMap[product._id.toString()];
-      const prev = entry?.sameDayPrev != null ? { price: entry.sameDayPrev, date: req.params.date }
-        : entry ? prevMap[product._id.toString()] : null;
+      const prev = prevOf(product._id, entry);
       return hideInternal(req, {
         prevPrice: prev?.price ?? null,
         prevDate:  prev?.date  ?? null,
