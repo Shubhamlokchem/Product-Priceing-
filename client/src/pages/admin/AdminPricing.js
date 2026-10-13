@@ -5,7 +5,7 @@ import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '08 Oct 2026 · 3:10 pm (target rounding by first decimal)';
+const BOARD_VERSION = '13 Oct 2026 · 2:45 pm (bigger data text)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
@@ -489,12 +489,14 @@ export default function AdminPricing() {
   const PADX = twoCols ? 10 : 30;   // breathing room between columns
   const boardW = window.innerWidth - 12 - 4;
   const needFor = fs => cols2.map(d => {
-   const hdr = tw2(d.h, `900 ${Math.max(11, fs - 1.5)}px ${mono}`, 1);
+   const hdr = tw2(d.h, `900 ${HDR_FS}px ${mono}`, 1);
    const font = d.price ? `400 ${fs + 2}px ${mono}` : `${d.st?.fontWeight || 400} ${fs}px ${mono}`;
    const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0) + (d.price ? (fs + 2) * 1.0 : 0);   // + room for the up / down arrow
    return Math.ceil(Math.max(hdr, val) + PADX + 2);
   });
-  let FS = Math.max(11, Math.min(22, Math.round(ROW_H2 * 0.58 * 2) / 2));   // text fills the row height
+  // Header text keeps its size; the data inside the rows is bigger (about 75% of the row height)
+  const HDR_FS = Math.max(11, Math.min(20.5, Math.round(ROW_H2 * 0.58 * 2) / 2 - 1.5));
+  let FS = Math.max(12, Math.min(30, Math.round(ROW_H2 * 0.74 * 2) / 2));
   let need = needFor(FS);
   for (let k = 0; k < 8 && need.reduce((a, b) => a + b, 0) > boardW && FS > 10; k++) {
    FS = Math.max(10, Math.floor(FS * boardW / need.reduce((a, b) => a + b, 0) * 2) / 2);
@@ -529,7 +531,7 @@ export default function AdminPricing() {
      ) : panels.map((pRows, pi) => (
       <div key={pi} style={{ flex: 1, minWidth: 0, background: '#0a2a5e', border: '2px solid #1e4f9a', borderRadius: 6, overflow: 'hidden', boxShadow: '0 0 0 4px #020b1c, 0 10px 30px rgba(0,0,0,0.5)' }}>
        {/* Column headers */}
-       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: Math.max(11, FS - 1.5), letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
+       <div style={{ display: 'grid', gridTemplateColumns: COLS, height: COLHDR_H, alignItems: 'center', background: 'linear-gradient(180deg, #fcd34d, #f59e0b)', color: '#0a1f45', fontWeight: 900, fontSize: HDR_FS, letterSpacing: 1, fontFamily: mono, textTransform: 'uppercase' }}>
         {cols2.map(d => <div key={d.h} style={{ ...cell, textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center' }}>{d.h}</div>)}
        </div>
        {/* Rows */}
