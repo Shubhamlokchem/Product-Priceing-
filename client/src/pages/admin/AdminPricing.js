@@ -5,7 +5,7 @@ import { targetText } from '../../utils/target';
 import '../Dashboard.css';
 // Target shown everywhere: saved range if the admin typed one, otherwise market +2% to +5%
 // Version of the TV boards. Hover over "LIVE PRICE INDEX" on a board to see which version the site is running.
-const BOARD_VERSION = '13 Oct 2026 · 2:45 pm (bigger data text)';
+const BOARD_VERSION = '14 Oct 2026 · 1:00 pm (larger data text)';
 
 // Smart-TV browsers usually have no Screen Wake Lock, and only a real playing video stops their screensaver.
 // NoSleep plays a tiny silent video for that. It must be started from the click / remote "OK" press that opens the board.
@@ -486,7 +486,7 @@ export default function AdminPricing() {
   // If everything doesn't fit the screen width, the font shrinks a little until it does.
   const mctx2 = document.createElement('canvas').getContext('2d');
   const tw2 = (t, font, ls = 0) => { mctx2.font = font; const str = String(t ?? ''); return mctx2.measureText(str).width + ls * str.length; };
-  const PADX = twoCols ? 10 : 30;   // breathing room between columns
+  const PADX = twoCols ? 10 : 20;   // breathing room between columns (spare width is shared out afterwards)
   const boardW = window.innerWidth - 12 - 4;
   const needFor = fs => cols2.map(d => {
    const hdr = tw2(d.h, `900 ${HDR_FS}px ${mono}`, 1);
@@ -496,7 +496,7 @@ export default function AdminPricing() {
   });
   // Header text keeps its size; the data inside the rows is bigger (about 75% of the row height)
   const HDR_FS = Math.max(11, Math.min(20.5, Math.round(ROW_H2 * 0.58 * 2) / 2 - 1.5));
-  let FS = Math.max(12, Math.min(30, Math.round(ROW_H2 * 0.74 * 2) / 2));
+  let FS = Math.max(12, Math.min(34, Math.round(ROW_H2 * 0.84 * 2) / 2));   // data text ≈ 84% of the row height
   let need = needFor(FS);
   for (let k = 0; k < 8 && need.reduce((a, b) => a + b, 0) > boardW && FS > 10; k++) {
    FS = Math.max(10, Math.floor(FS * boardW / need.reduce((a, b) => a + b, 0) * 2) / 2);
@@ -509,7 +509,7 @@ export default function AdminPricing() {
   const shareOf = d => share[d.h] ?? 1;
   const shareSum = cols2.reduce((a, d) => a + shareOf(d), 0) || 1;
   const COLS = cols2.map((d, i) => `${Math.floor(need[i] + spare * shareOf(d) / shareSum)}px`).join(' ');
-  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 12px' };
+  const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 8px' };   // must stay below PADX/2 so measured widths are never cut
   // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
   const wrap = twoCols ? { whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' } : {};
 
