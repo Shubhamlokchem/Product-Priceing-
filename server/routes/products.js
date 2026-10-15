@@ -63,6 +63,21 @@ router.post('/bulk-update', protect, async (req, res) => {
 });
 
 // Get single product
+// Rename a whole product group (fixes spelling mistakes). If the new name already
+// exists, the products simply join that group.
+router.post('/rename-group', protect, async (req, res) => {
+  try {
+    const from = String(req.body.from || '').trim();
+    const to = String(req.body.to || '').trim().toUpperCase();
+    if (!from || !to) return res.status(400).json({ message: 'Old and new group names are required' });
+    if (from === to) return res.json({ count: 0 });
+    const r = await Product.updateMany({ group: from }, { $set: { group: to, name: to } });
+    res.json({ count: r.modifiedCount });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 router.get('/:id', protect, async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);

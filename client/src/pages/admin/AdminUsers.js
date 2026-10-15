@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import { useAuth } from '../../context/AuthContext';
+import PagesPicker from '../../components/PagesPicker';
+import { DEFAULT_USER_PAGES, pagesOf } from '../../utils/pages';
 import '../Dashboard.css';
 
-const EMPTY = { name: '', email: '', password: '', role: 'user' };
+const EMPTY = { name: '', email: '', password: '', role: 'user', pages: DEFAULT_USER_PAGES };
 
 export default function AdminUsers() {
  const [users, setUsers] = useState([]);
@@ -66,7 +68,8 @@ export default function AdminUsers() {
  setMsg(null);
  setSaving(true);
  try {
- const { data } = await api.post('/auth/create-user', form);
+ if (form.role === 'user' && !form.pages.length) { setMsg({ type: 'error', text: 'Tick at least one page this user can open.' }); setSaving(false); return; }
+ const { data } = await api.post('/auth/create-user', form.role === 'user' ? form : { ...form, pages: undefined });
  setMsg({ type: 'success', text: `Account created for ${data.user.email}` });
  setForm(EMPTY);
  setShowForm(false);
@@ -74,6 +77,13 @@ export default function AdminUsers() {
  } catch (err) {
  setMsg({ type: 'error', text: err.response?.data?.message || 'Failed to create account' });
  } finally { setSaving(false); }
+ };
+
+ // Save which pages a user account can open (updates the row straight away)
+ const savePages = async (u, pages) => {
+  setUsers(list => list.map(x => (x._id === u._id ? { ...x, pages } : x)));
+  try { await api.put(`/auth/users/${u._id}/pages`, { pages }); }
+  catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Could not save page access' }); load(); }
  };
 
  const deactivate = async (id, name) => {
@@ -225,6 +235,12 @@ export default function AdminUsers() {
  <option value="admin">Admin — Full access</option>
  </select>
  </div>
+ <div className="form-field">
+ <label>Pages this user can open *</label>
+ {form.role === 'admin'
+ ? <div style={{ padding: '9px 12px', fontSize: 13, color: '#92400e', background: '#fef3c7', borderRadius: 8 }}>Admins can open all pages</div>
+ : <PagesPicker size="md" value={form.pages} onChange={pages => setForm(f => ({ ...f, pages }))} />}
+ </div>
  </div>
 
  <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
@@ -313,6 +329,9 @@ export default function AdminUsers() {
  <option value="admin">Admin</option>
  <option value="user">User</option>
  </select>
+ )}
+ {u.role === 'user' && !isMe(u) && (
+ <span style={{ marginLeft: 6 }}><PagesPicker value={pagesOf(u)} onChange={pages => savePages(u, pages)} /></span>
  )}
  </td>
  <td>

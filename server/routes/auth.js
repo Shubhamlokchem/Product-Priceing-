@@ -40,7 +40,11 @@ const ipAllowed = (ip, allowed) => {
   });
 };
 
-const safeUser = (u) => ({ id: u._id, name: u.name, email: u.email, role: u.role, category: u.category || '' });
+// Pages that can be given to a 'user' account (Create / Manage IDs is always admin-only)
+const PAGE_KEYS = ['dashboard', 'products', 'history', 'compare', 'queries'];
+const cleanPages = (list) => (Array.isArray(list) ? PAGE_KEYS.filter(k => list.includes(k)) : undefined);
+
+const safeUser = (u) => ({ id: u._id, name: u.name, email: u.email, role: u.role, category: u.category || '', pages: Array.isArray(u.pages) ? u.pages : null });
 
 // Login with email + password
 router.post('/login', async (req, res) => {
@@ -67,7 +71,7 @@ router.post('/login', async (req, res) => {
 // Admin: Create a new user or admin account
 router.post('/create-user', protect, adminOnly, async (req, res) => {
   try {
-    const { name, email, password, role, category } = req.body;
+    const { name, email, password, role, category, pages } = req.body;
     if (!name || !email || !password)
       return res.status(400).json({ message: 'Name, email and password are required' });
 
@@ -84,6 +88,7 @@ router.post('/create-user', protect, adminOnly, async (req, res) => {
       existing.password  = password;
       existing.role      = role === 'admin' ? 'admin' : 'user';
       existing.category  = category || '';
+      existing.pages     = cleanPages(pages);
       existing.isActive  = true;
       existing.createdBy = req.user.id;
       user = await existing.save();
@@ -94,11 +99,36 @@ router.post('/create-user', protect, adminOnly, async (req, res) => {
         password,
         role: role === 'admin' ? 'admin' : 'user',
         category: category || '',
+        pages: cleanPages(pages),
         createdBy: req.user.id,
       });
     }
 
     res.status(201).json({ message: 'Account created successfully', user: safeUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Logged-in account's own details (used to refresh page access without logging out)
+router.get('/me', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || !user.isActive) return res.status(401).json({ message: 'Account not active' });
+    res.json({ user: safeUser(user) });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Admin: set which pages a user account can open
+router.put('/users/:id/pages', protect, adminOnly, async (req, res) => {
+  try {
+    const pages = cleanPages(req.body.pages);
+    if (!pages) return res.status(400).json({ message: 'pages must be a list' });
+    const user = await User.findOneAndUpdate({ _id: req.params.id, isActive: true }, { pages }, { new: true });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ message: `Page access updated for ${user.name}`, user: safeUser(user) });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

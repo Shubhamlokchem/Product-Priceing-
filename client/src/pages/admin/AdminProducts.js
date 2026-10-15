@@ -63,6 +63,8 @@ export default function AdminProducts() {
  const [groups, setGroups] = useState([]);
  const [priceMap, setPriceMap] = useState({}); // { productId: { price, notes } }
  const [origMap, setOrigMap] = useState({}); // prices that existed on load
+ const [refMap, setRefMap] = useState({}); // latest known price per product (for the big-change warning)
+ const [onlyMissing, setOnlyMissing] = useState(false); // show only products not priced on this date
  const [editMap, setEditMap] = useState({}); // inline product field edits
  const [editingId, setEditingId] = useState(null); // which row is in edit mode
  const [loading, setLoading] = useState(true);
@@ -140,6 +142,10 @@ export default function AdminProducts() {
 
  setPriceMap(pm);
  setOrigMap(om);
+ const rm = {};
+ latestRes.data.forEach(e => { if (e.price !== null && e.price !== undefined) rm[e.product._id] = { price: Number(e.price), date: e.date }; });
+ priceRes.data.forEach(e => { if (e.price !== null && e.price !== undefined) rm[e.product._id] = { price: Number(e.price), date: e.date }; });
+ setRefMap(rm);
  setEditMap({});
  setEditingId(null);
  } catch { setMsg({ type: 'error', text: 'Failed to load data' }); }
@@ -212,6 +218,22 @@ export default function AdminProducts() {
  catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Delete failed' }); }
  };
 
+ // Rename a whole group (e.g. fix a spelling mistake)
+ const renameGroup = async (group) => {
+  const to = window.prompt(`Rename "${group}" to:`, group);
+  if (to === null) return;
+  const name = to.trim().toUpperCase();
+  if (!name || name === group) return;
+  const merge = groups.includes(name) ? `\n\n"${name}" already exists — the products will be moved into it.` : '';
+  if (merge && !window.confirm(`Rename "${group}" to "${name}"?${merge}`)) return;
+  try {
+   const { data } = await api.post('/products/rename-group', { from: group, to: name });
+   setMsg({ type: 'success', text: `Renamed ${data.count} product(s) to ${name}` });
+   setExpandedGroups(prev => { const n = new Set(prev); if (n.delete(group)) n.add(name); return n; });
+   loadData(true);
+  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Rename failed' }); }
+ };
+
  // Add new product
  const submitAdd = async e => {
  e.preventDefault(); setMsg(null);
@@ -234,6 +256,20 @@ export default function AdminProducts() {
  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Add failed' }); }
  };
 
+ // Big-change guard: catches typos like 2255 instead of 225 before they are saved
+ const BIG_CHANGE = 0.3; // warn when the price moves more than 30% from the last known price
+ const confirmBigChanges = (items) => {
+  const label = p => [p.group, p.make, p.coo].filter(Boolean).join(' / ');
+  const odd = items.map(({ product, price }) => {
+   const ref = refMap[product._id];
+   if (!ref || !ref.price || price === null || isNaN(price)) return null;
+   if (Math.abs(price - ref.price) / ref.price <= BIG_CHANGE) return null;
+   return `• ${label(product)}: ₹${ref.price} → ₹${price}`;
+  }).filter(Boolean);
+  if (!odd.length) return true;
+  return window.confirm(`These prices changed by more than 30% from the last price:\n\n${odd.slice(0, 15).join('\n')}${odd.length > 15 ? `\n…and ${odd.length - 15} more` : ''}\n\nClick OK to save anyway, or Cancel to check them.`);
+ };
+
  // Save all prices for selected date
  const savePrices = async () => {
  setSaving(true); setMsg(null);
@@ -245,6 +281,7 @@ export default function AdminProducts() {
  return !pm.isLatest && (filled(pm.price) || filled(pm.cost) || filled(pm.target) || had);
  });
  if (!toSave.length) { setSaving(false); return; }
+ if (!confirmBigChanges(toSave.map(p => { const r = priceMap[p._id]?.price; return { product: p, price: (r !== '' && r !== undefined && r !== null) ? parseFloat(r) : null }; }))) { setSaving(false); return; }
 
  const prices = toSave.map(p => {
  const raw = priceMap[p._id]?.price;
@@ -267,6 +304,8 @@ export default function AdminProducts() {
  // Save price for a single row
  const saveRowPrice = async (productId) => {
  const raw = priceMap[productId]?.price;
+ const prod = products.find(x => x._id === productId);
+ if (prod && !confirmBigChanges([{ product: prod, price: (raw !== '' && raw !== undefined && raw !== null) ? parseFloat(raw) : null }])) return;
  try {
   await api.post('/prices', { productId, price: (raw !== '' && raw !== undefined) ? parseFloat(raw) : null, cost: priceMap[productId]?.cost ?? null, ...parseTarget(priceMap[productId]?.target, raw), notes: priceMap[productId]?.notes || '', ex: priceMap[productId]?.ex || '', date });
   setMsg({ type: 'success', text: 'Price saved!' });
@@ -466,6 +505,7 @@ export default function AdminProducts() {
  const pricedOnDate = p => { const e = priceMap[p._id]; return !!e && !e.isLatest && (filledV(e.price) || filledV(e.cost) || filledV(e.target)); };
  const filtered = products.filter(p => {
  if (isPastDate && !showAllOnDate && !pricedOnDate(p)) return false;
+ if (onlyMissing && pricedOnDate(p)) return false;
  const matchGroup = filterGroups.size === 0 || filterGroups.has(p.group);
  const matchProduct = filterProducts.size === 0 || filterProducts.has(p.group);
  const q = norm(search);
@@ -483,6 +523,7 @@ export default function AdminProducts() {
  const grouped = filtered.reduce((acc, p) => { if (!acc[p.group]) acc[p.group] = []; acc[p.group].push(p); return acc; }, {});
  // Bulk actions apply to ticked products; if none ticked, to the products currently shown (respects filters/search)
  const bulkTargets = selectedProducts.size > 0 ? products.filter(p => selectedProducts.has(p._id)) : filtered;
+ const missingCount = products.filter(p => !pricedOnDate(p)).length;
  const pricedCount = products.filter(p => priceMap[p._id]?.price !== '' && priceMap[p._id]?.price !== undefined).length;
  // Count groups that have at least one product selected
  const allGrouped = products.reduce((acc, p) => { if (!acc[p.group]) acc[p.group] = []; acc[p.group].push(p); return acc; }, {});
@@ -820,6 +861,23 @@ export default function AdminProducts() {
    </div>
   )}
 
+  {/* Missing prices bar — how many products still have no price on this date */}
+  {!loading && products.length > 0 && (!isPastDate || showAllOnDate) && (
+   <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0 8px', padding: '7px 12px', borderRadius: 9, fontSize: 13,
+    background: missingCount ? '#fff7ed' : '#f0fdf4', border: `1px solid ${missingCount ? '#fed7aa' : '#bbf7d0'}`, color: missingCount ? '#9a3412' : '#166534' }}>
+    {missingCount
+     ? <span><b>{missingCount}</b> of {products.length} products have no price for {isPastDate ? date : 'today'}</span>
+     : <span>All {products.length} products are priced for {isPastDate ? date : 'today'} ✓</span>}
+    <div style={{ flex: 1 }} />
+    {(missingCount > 0 || onlyMissing) && (
+     <button type="button" onClick={() => { setOnlyMissing(v => !v); if (!onlyMissing) setExpandedGroups(new Set(products.filter(p => !pricedOnDate(p)).map(p => p.group))); }}
+      style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 7, cursor: 'pointer', border: '1px solid #fdba74', background: onlyMissing ? '#ea580c' : '#fff', color: onlyMissing ? '#fff' : '#c2410c' }}>
+      {onlyMissing ? 'Show all products' : 'Show only missing'}
+     </button>
+    )}
+   </div>
+  )}
+
   {/* Product + Price table grouped */}
   {loading && products.length === 0 ? <div className="spinner">Loading...</div> : isPastDate && !showAllOnDate && Object.keys(grouped).length === 0 ? (
    <div style={{ background: '#fff', border: '1px dashed #fcd34d', borderRadius: 10, padding: '28px 16px', textAlign: 'center', color: '#92400e', fontSize: 13 }}>
@@ -858,6 +916,12 @@ export default function AdminProducts() {
     </svg>
     <span style={{ fontWeight: 700, color: '#1a3a6b', fontSize: 13 }}>{group}</span>
     <span style={{ fontSize: 11, color: '#94a3b8', background: '#f1f5f9', padding: '1px 7px', borderRadius: 999 }}>{items.length}</span>
+    <button type="button" title="Rename this group (fix spelling)" onClick={e => { e.stopPropagation(); renameGroup(group); }}
+     style={{ display: 'flex', alignItems: 'center', padding: '2px 5px', border: '1px solid transparent', borderRadius: 5, background: 'transparent', color: '#94a3b8', cursor: 'pointer' }}
+     onMouseEnter={e => { e.currentTarget.style.color = '#1a3a6b'; e.currentTarget.style.borderColor = '#c7d7fa'; }}
+     onMouseLeave={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.borderColor = 'transparent'; }}>
+     <IconEdit />
+    </button>
     <div style={{ flex: 1 }} />
     </div>{/* /clickable expand area */}
    </div>

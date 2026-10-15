@@ -10,6 +10,8 @@ const userSchema = new mongoose.Schema({
   isActive:  { type: Boolean, default: true },
   // IP addresses this account may log in from. Empty = any IP. "203.0.113.*" matches a whole range.
   allowedIps: { type: [String], default: [] },
+  // Pages a 'user' account may open. Not set = the standard set (Dashboard, Manage Products, Queries).
+  pages: { type: [String], default: undefined },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
