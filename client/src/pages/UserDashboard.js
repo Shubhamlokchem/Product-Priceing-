@@ -33,7 +33,7 @@ export default function UserDashboard() {
     commitUser(data.user);
    }
   }).catch(() => {});
- }, []); // eslint-disable-line react-hooks/exhaustive-deps
+ }, []);
 
  const allowed = pagesOf(user);
  const pages = ALL.filter(p => allowed.includes(p.key));
