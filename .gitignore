@@ -5,3 +5,7 @@ server/.env
 .env
 client/build/
 *.log
+
+# Data exports (contain user emails)
+*.xlsx
+*.csv
