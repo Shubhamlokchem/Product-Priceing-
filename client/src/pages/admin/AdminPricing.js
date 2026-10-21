@@ -77,6 +77,7 @@ const LEFT_COLS = new Set(['PRODUCT', 'MAKE', 'ORIGIN', 'EX']);
 const tgtOf = it => targetText(it.target, it.targetMax, it.price);
 
 const REFRESH_SEC = 7;
+const BOARD_DAYS = 3; // a price stays on the TV boards for this many days, then drops off
 
 // Proper case for TV boards: "ADIPIC ACID" -> "Adipic Acid", "1-BROMO 3-CHLORO" -> "1-Bromo 3-Chloro".
 // Short codes stay in capitals (USA, UK, BASF, KH, PVC …); numbers / % / ₹ are untouched.
@@ -377,7 +378,10 @@ export default function AdminPricing() {
    ]);
    setItems(priceRes.data);
    setGroups(grpRes.data);
-   setLatestItems(latestRes.data);
+   // Price board shows a price for 3 days only (the day it is updated + 2 more days).
+   // After that it drops off the boards until a new price is entered. History is kept.
+   const cutoff = new Date(Date.now() - (BOARD_DAYS - 1) * 86400000).toLocaleDateString('en-CA');
+   setLatestItems(latestRes.data.filter(i => i.date && i.date >= cutoff));
    setCountdown(REFRESH_SEC);
   } catch (err) { setError(err.response?.data?.message || 'Failed to load'); }
   finally { if (showSpinner) setLoading(false); }
