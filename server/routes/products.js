@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const Product = require('../models/Product');
 const { protect, adminOnly } = require('../middleware/auth');
+const { clearBoardCache } = require('./prices');
+// Product changes (add, edit, rename, delete) clear the shared price-board data
+router.use((req, res, next) => { if (req.method !== 'GET') clearBoardCache(); next(); });
 // Users (non-admins) have the same rights as admins on Dashboard, Manage Products and Queries.
 // (Reseeding the product list stays admin-only.) Only account management (Create / Manage IDs) stays admin-only.
 

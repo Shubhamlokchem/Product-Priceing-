@@ -13,11 +13,12 @@ const hideInternal = (req, obj) => { if (req.user?.role !== 'admin') { delete ob
 // the same product name + make (ignoring capital letters) counts as the same product.
 // If the price was changed again on the same day, that earlier value (sameDayPrev) is used first.
 const normTxt = v => String(v || '').trim().toLowerCase().replace(/\s+/g, ' ');
-const buildPrevFinder = async () => {
-  const allProducts = await Product.find({}, { group: 1, make: 1 }).lean();
+const buildPrevFinder = async (pre) => {
+  const allProducts = pre ? pre.allProducts : await Product.find({}, { group: 1, make: 1 }).lean();
   const keyOfId = {};
   allProducts.forEach(p => { keyOfId[String(p._id)] = normTxt(p.group) + '|' + normTxt(p.make); });
-  const priced = await PriceEntry.find({ price: { $ne: null } }, { product: 1, date: 1, price: 1, updatedAt: 1 }).lean();
+  const priced = pre ? pre.entries.filter(e => e.price != null)
+    : await PriceEntry.find({ price: { $ne: null } }, { product: 1, date: 1, price: 1, updatedAt: 1 }).lean();
   const byKey = {};
   priced.forEach(e => { const k = keyOfId[String(e.product)]; if (k) (byKey[k] = byKey[k] || []).push(e); });
   const stamp = e => `${e.date}|${new Date(e.updatedAt || 0).toISOString()}`;
@@ -36,13 +37,42 @@ const buildPrevFinder = async () => {
   };
 };
 
+// ── Fast board data ─────────────────────────────────────────────────────────────
+// The price board refreshes every few seconds on every screen. Instead of asking the
+// database once per product, load everything in 3 queries and work it out in memory.
+// The result is shared for a few seconds, and cleared as soon as any price or product changes.
+const BOARD_CACHE_MS = 5000;
+let boardCache = null; // { at, promise }
+const clearBoardCache = () => { boardCache = null; };
+const loadBoard = () => {
+  if (boardCache && Date.now() - boardCache.at < BOARD_CACHE_MS) return boardCache.promise;
+  const promise = (async () => {
+    const [active, allProducts, entries] = await Promise.all([
+      Product.find({ isActive: true }).lean(),
+      Product.find({}, { group: 1, make: 1 }).lean(),
+      PriceEntry.find({}).lean(),
+    ]);
+    const latestOf = {};
+    entries.forEach(e => {
+      const k = String(e.product);
+      if (!latestOf[k] || e.date > latestOf[k].date) latestOf[k] = e;
+    });
+    const prevOf = await buildPrevFinder({ allProducts, entries });
+    return { active, entries, latestOf, prevOf };
+  })();
+  boardCache = { at: Date.now(), promise };
+  promise.catch(() => { if (boardCache && boardCache.promise === promise) boardCache = null; });
+  return promise;
+};
+// Any change (save price, bulk save, delete …) clears the shared board data
+router.use((req, res, next) => { if (req.method !== 'GET') clearBoardCache(); next(); });
+
 // Get latest prices for all products
 router.get('/latest', protect, async (req, res) => {
   try {
-    const products = await Product.find({ isActive: true });
-    const prevOf = await buildPrevFinder();
-    const result = await Promise.all(products.map(async (product) => {
-      const latest = await PriceEntry.findOne({ product: product._id }).sort({ date: -1 }).lean();
+    const { active: products, latestOf, prevOf } = await loadBoard();
+    const result = products.map((product) => {
+      const latest = latestOf[String(product._id)] || null;
       const prev = prevOf(product._id, latest);
       return hideInternal(req, {
         prevPrice: prev?.price ?? null,
@@ -58,7 +88,7 @@ router.get('/latest', protect, async (req, res) => {
         ex:        latest?.ex        ?? '',
         updatedAt: latest?.updatedAt ?? null,
       });
-    }));
+    });
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -68,14 +98,10 @@ router.get('/latest', protect, async (req, res) => {
 // Get prices for a specific date (all users can access for date filter)
 router.get('/date/:date', protect, async (req, res) => {
   try {
-    const entries = await PriceEntry.find({ date: req.params.date }).populate('product');
-
+    const { active: products, entries: all, prevOf } = await loadBoard();
     // For dates where some products have no entry, fill with nulls
-    const products = await Product.find({ isActive: true });
     const entryMap = {};
-    entries.forEach(e => { if (e.product) entryMap[e.product._id.toString()] = e; });
-
-    const prevOf = await buildPrevFinder();
+    all.forEach(e => { if (e.date === req.params.date) entryMap[String(e.product)] = e; });
 
     const result = products.map(product => {
       const entry = entryMap[product._id.toString()];
@@ -260,4 +286,5 @@ router.post('/bulk', protect, async (req, res) => {
   }
 });
 
+router.clearBoardCache = clearBoardCache;
 module.exports = router;
