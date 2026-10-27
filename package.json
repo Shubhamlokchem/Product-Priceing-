@@ -2,9 +2,14 @@
   "name": "pricing-hub",
   "version": "1.0.0",
   "scripts": {
+    "postinstall": "cd server && npm install",
+    "start": "cd server && npm start",
     "install-all": "cd server && npm install && cd ../client && npm install",
     "dev": "start cmd /k \"cd server && npm run dev\" && start cmd /k \"cd client && npm start\"",
     "start:server": "cd server && npm run dev",
     "start:client": "cd client && npm start"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
