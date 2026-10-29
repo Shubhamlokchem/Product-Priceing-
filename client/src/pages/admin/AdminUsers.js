@@ -7,6 +7,8 @@ import '../Dashboard.css';
 
 const EMPTY = { name: '', email: '', password: '', role: 'user', pages: DEFAULT_USER_PAGES };
 
+const editInput = w => ({ width: w, padding: '5px 8px', border: '1.5px solid #2558a8', borderRadius: 6, fontSize: 13 });
+
 export default function AdminUsers() {
  const [users, setUsers] = useState([]);
  const [form, setForm] = useState(EMPTY);
@@ -18,6 +20,9 @@ export default function AdminUsers() {
  const [newPwd, setNewPwd] = useState('');
  const [filterRole, setFilterRole] = useState('');
  const [roleSaving, setRoleSaving] = useState(null);
+ const [editId, setEditId] = useState(null);            // account being edited (name / email)
+ const [editForm, setEditForm] = useState({ name: '', email: '' });
+ const [editSaving, setEditSaving] = useState(false);
  const [selected, setSelected] = useState(new Set());   // ticked account ids
  const [ipEdit, setIpEdit] = useState(null);            // null | account id | 'bulk'
  const [ipList, setIpList] = useState([]);              // IPs being edited (as separate chips)
@@ -84,6 +89,22 @@ export default function AdminUsers() {
   setUsers(list => list.map(x => (x._id === u._id ? { ...x, pages } : x)));
   try { await api.put(`/auth/users/${u._id}/pages`, { pages }); }
   catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Could not save page access' }); load(); }
+ };
+
+ // Edit name / email (login ID)
+ const startEdit = u => { setEditId(u._id); setEditForm({ name: u.name, email: u.email }); setResetId(null); setIpEdit(null); setMsg(null); };
+ const saveEdit = async u => {
+  const name = editForm.name.trim(), email = editForm.email.trim().toLowerCase();
+  if (!name || !email) { setMsg({ type: 'error', text: 'Name and email are required' }); return; }
+  if (email !== u.email && !window.confirm(`Change the login ID of ${u.name} from ${u.email} to ${email}?\n\nThey must use the new email to log in.`)) return;
+  setEditSaving(true); setMsg(null);
+  try {
+   const { data } = await api.put(`/auth/users/${u._id}`, { name, email });
+   setMsg({ type: 'success', text: data.message });
+   setEditId(null);
+   load();
+  } catch (err) { setMsg({ type: 'error', text: err.response?.data?.message || 'Could not update the account' }); }
+  finally { setEditSaving(false); }
  };
 
  const deactivate = async (id, name) => {
@@ -312,8 +333,21 @@ export default function AdminUsers() {
  <span style={numBox(selected.has(u._id))}>{i + 1}</span>
  </label>
  </td>
+ {editId === u._id ? (
+ <>
+ <td><input value={editForm.name} autoFocus onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+  onKeyDown={e => { if (e.key === 'Enter') saveEdit(u); if (e.key === 'Escape') setEditId(null); }}
+  placeholder="Full name" style={editInput(150)} /></td>
+ <td><input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))}
+  onKeyDown={e => { if (e.key === 'Enter') saveEdit(u); if (e.key === 'Escape') setEditId(null); }}
+  placeholder="Email (login ID)" style={editInput(210)} /></td>
+ </>
+ ) : (
+ <>
  <td><div className="product-name">{u.name}</div></td>
  <td style={{ color: '#2d3748' }}>{u.email}</td>
+ </>
+ )}
  <td>
  {isMe(u) ? (
  <span className="badge" title="You cannot change your own role" style={{ background: '#fef3c7', color: '#92400e' }}>
@@ -356,9 +390,19 @@ export default function AdminUsers() {
  {new Date(u.createdAt).toLocaleDateString('en-IN')}
  </td>
  <td>
+ {editId === u._id ? (
  <div style={{ display: 'flex', gap: 6 }}>
+ <button className="btn btn-sm btn-accent" disabled={editSaving} onClick={() => saveEdit(u)}>{editSaving ? 'Saving…' : 'Save'}</button>
+ <button className="btn btn-sm btn-danger" onClick={() => setEditId(null)}>Cancel</button>
+ </div>
+ ) : (
+ <div style={{ display: 'flex', gap: 6 }}>
+ <button title="Edit name and email" onClick={() => startEdit(u)}
+ style={{ padding: '5px 12px', fontSize: 12, fontWeight: 700, borderRadius: 7, cursor: 'pointer', border: '1.5px solid #93c5fd', background: '#eff6ff', color: '#1d4ed8' }}>
+ Edit
+ </button>
  <button className="btn btn-sm btn-primary"
- onClick={() => { setResetId(resetId === u._id ? null : u._id); setNewPwd(''); setIpEdit(null); }}>
+ onClick={() => { setResetId(resetId === u._id ? null : u._id); setNewPwd(''); setIpEdit(null); setEditId(null); }}>
  Reset Pwd
  </button>
  <button className="btn btn-sm btn-danger"
@@ -366,6 +410,7 @@ export default function AdminUsers() {
  Remove
  </button>
  </div>
+ )}
  </td>
  </tr>
  {ipEdit === u._id && (

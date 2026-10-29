@@ -190,6 +190,30 @@ router.put('/users/ips', protect, adminOnly, async (req, res) => {
   }
 });
 
+// Admin: edit an account's name and email (login ID)
+router.put('/users/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const name = String(req.body.name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!name || !email) return res.status(400).json({ message: 'Name and email are required' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: 'Please enter a valid email address' });
+
+    const user = await User.findById(req.params.id);
+    if (!user || !user.isActive) return res.status(404).json({ message: 'User not found' });
+
+    if (email !== user.email) {
+      const other = await User.findOne({ email, _id: { $ne: user._id } });
+      if (other) return res.status(400).json({ message: other.isActive
+        ? 'Another account already uses this email'
+        : 'This email belongs to a removed account. Use a different email.' });
+    }
+    await User.updateOne({ _id: user._id }, { name, email });
+    res.json({ message: `Account updated for ${name}`, user: { ...safeUser(user), name, email } });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Admin: Change an account's role (admin <-> user)
 router.put('/users/:id/role', protect, adminOnly, async (req, res) => {
   try {
