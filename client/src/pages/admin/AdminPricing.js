@@ -95,7 +95,7 @@ const fmtDate = (d) => {
 };
 
 /* ── Shared TV top bar (Price Board 1 & 2): compact, same info ── */
-function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, progressPct, onPrev, onNext, onExit }) {
+function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, progressPct, onPrev, onNext, onExit, textScale, onTextScale }) {
  const [now, setNow] = useState(new Date());
  useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t); }, []);
  // full-screen toggle (browser Fullscreen API)
@@ -148,6 +148,14 @@ function TvTopBar({ height, date, live, countdown, page, pages, pageCountdown, p
        {now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
       </span>
      </span>
+     {onTextScale && <>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Text size on this screen (saved on this TV)">
+       <button onClick={() => onTextScale(-1)} style={{ ...navB, width: 'auto', padding: '0 7px', borderRadius: 7, fontSize: 12 }} aria-label="Smaller text">A−</button>
+       <span style={{ fontSize: 11, color: '#fff', fontWeight: 800, minWidth: 34, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{Math.round(textScale * 100)}%</span>
+       <button onClick={() => onTextScale(1)} style={{ ...navB, width: 'auto', padding: '0 7px', borderRadius: 7, fontSize: 14 }} aria-label="Bigger text">A+</button>
+      </span>
+      {sep}
+     </>}
      <button onClick={() => { if (document.fullscreenElement) document.exitFullscreen?.(); onExit(); }} title="Exit" aria-label="Exit" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, padding: 0, borderRadius: 9, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer' }}
       onMouseEnter={e => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
       onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; }}>
@@ -325,6 +333,14 @@ export default function AdminPricing() {
  useKeepAwake(tvMode || tv2Mode);                // the screen must not sleep while a board is showing
  const TV2_PAGE_SEC = 15;
  const [tv2Page, setTv2Page] = useState(0);
+ // Text size for the TV board (A− / A+). Saved on each TV, so every screen can have its own size.
+ const [tvScale, setTvScale] = useState(() => { try { const v = Number(localStorage.getItem('tvTextScale')); return v >= 0.7 && v <= 2.5 ? v : 1; } catch { return 1; } });
+ const changeTvScale = dir => setTvScale(v => {
+  const n = Math.round(Math.min(2.5, Math.max(0.7, v + dir * 0.1)) * 10) / 10;
+  try { localStorage.setItem('tvTextScale', String(n)); } catch {}
+  setTv2Page(0);
+  return n;
+ });
  const [tv2Countdown, setTv2Countdown] = useState(TV2_PAGE_SEC);
  useEffect(() => {
   if (!tv2Mode) { setTv2Page(0); setTv2Countdown(TV2_PAGE_SEC); return; }
@@ -453,13 +469,15 @@ export default function AdminPricing() {
    .filter(i => i.price !== null)
    .sort((a, b) => (a.product.group || '').localeCompare(b.product.group || '') ||
     (a.product.make || '').localeCompare(b.product.make || '', undefined, { numeric: true, sensitivity: 'base' }));
-  const HDR_H = 56, COLHDR_H = 28, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
+  const HDR_H = 56, FOOT_H = 0, PANEL_GAP = 12;   // footer removed
+  const COLHDR_H = Math.round(28 * Math.max(1, window.innerHeight / 1080));
   const TICK_H = 34;
   const boardH = window.innerHeight - HDR_H - FOOT_H - COLHDR_H - TICK_H - TERMS_H - 12;
   // Single column; when the screen is full the rest goes to the next screen (auto-flip every 20 s)
   const twoCols = false;
   // At least 25 products per screen: rows shrink to fit on small screens, stay 34px where there is room
-  const ROWS_PER_SCREEN = 20;   // exactly 20 products on every screen; rows stretch to fill the height
+  // 20 products per screen at normal size; bigger text (A+) shows fewer rows so each row is taller
+  const ROWS_PER_SCREEN = Math.max(6, Math.min(25, Math.round(20 / tvScale)));
   const perPanel = ROWS_PER_SCREEN;
   const ROW_H2 = Math.floor((boardH / perPanel) * 10) / 10;
   const perPage = perPanel;
@@ -495,31 +513,61 @@ export default function AdminPricing() {
   const needFor = fs => cols2.map(d => {
    const hdr = tw2(d.h, `900 ${HDR_FS}px ${mono}`, 1);
    const font = d.price ? `400 ${fs + 2}px ${mono}` : `${d.st?.fontWeight || 400} ${fs}px ${mono}`;
-   const val = rows2.reduce((m, it, i) => Math.max(m, tw2(properCase(String(d.get(it, i + 1) || '—')), font)), 0) + (d.price ? (fs + 2) * 1.0 : 0);   // + room for the up / down arrow
+   const meas = t => tw2(t.replace(/\d/g, '0'), font) * (d.wrap ? 1.03 : 1.08);   // digits are equal-width on the board
+   const val = rows2.reduce((m, it, i) => Math.max(m, meas(properCase(String(d.get(it, i + 1) || '—')))), 0) + (d.price ? (fs + 2) * 1.0 : 0);   // + room for the up / down arrow
    return Math.ceil(Math.max(hdr, val) + PADX + 2);
   });
   // Header text keeps its size; the data inside the rows is bigger (about 75% of the row height)
-  const HDR_FS = Math.max(11, Math.min(20.5, Math.round(ROW_H2 * 0.58 * 2) / 2 - 1.5));
-  let FS = Math.max(12, Math.min(34, Math.round(ROW_H2 * 0.84 * 2) / 2));   // data text ≈ 84% of the row height
-  let need = needFor(FS);
-  for (let k = 0; k < 8 && need.reduce((a, b) => a + b, 0) > boardW && FS > 10; k++) {
-   FS = Math.max(10, Math.floor(FS * boardW / need.reduce((a, b) => a + b, 0) * 2) / 2);
-   need = needFor(FS);
+  const HDR_FS = Math.max(11, Math.min(20.5 * Math.max(1, window.innerHeight / 1080), COLHDR_H * 0.68, Math.round(ROW_H2 * 0.58 * 2) / 2 - 1.5));
+  const big = Math.max(1, window.innerHeight / 1080);   // 4K / large screens get proportionally bigger text
+  let FS = Math.max(12, Math.min(34 * big * Math.max(1, tvScale), Math.round(ROW_H2 * 0.84 * 2) / 2));   // data text ≈ 84% of the row height
+  // A few long notes (e.g. Origin "Food Grade 85% under clearance") must not shrink the whole board.
+  // When the columns don't fit, the widest text columns are capped; only those long cells get smaller text (cellFs).
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const isTextCol = d => !!d.wrap;
+  const capText = arr => {
+   if (sum(arr) <= boardW) return { w: arr, cap: Infinity };
+   const fixed = sum(arr.filter((_, i) => !isTextCol(cols2[i])));
+   const texts = arr.filter((_, i) => isTextCol(cols2[i]));
+   const avail = boardW - fixed;
+   if (avail <= 0 || !texts.length) return { w: arr, cap: 0 };
+   // product names get the most room, then make; notes in other columns are squeezed first
+   const wt = d => (d.h === 'PRODUCT' ? 2.2 : d.h === 'MAKE' ? 1.4 : 1);
+   const hdrW = cols2.map(d => Math.ceil(tw2(d.h, `900 ${HDR_FS}px ${mono}`, 1) + PADX + 2));   // never narrower than the header
+   const capped = c => arr.map((w, i) => (isTextCol(cols2[i]) ? Math.min(w, Math.max(hdrW[i], c * wt(cols2[i]))) : w));
+   let lo = 0, hi = Math.max(...texts);
+   for (let k = 0; k < 30; k++) { const mid = (lo + hi) / 2; if (sum(capped(mid)) > boardW) hi = mid; else lo = mid; }
+   return { w: capped(lo).map(Math.floor), cap: lo };
+  };
+  let fit = capText(needFor(FS));
+  // only when even the squeezed columns don't fit the screen does the whole font get smaller
+  for (let k = 0; k < 10 && (sum(fit.w) > boardW || fit.cap * 2.2 < FS * 6) && FS > 10; k++) {
+   FS = Math.max(10, Math.floor(FS * 0.92 * 2) / 2);
+   fit = capText(needFor(FS));
   }
+  let need = fit.w;
   // spare width goes to the text columns (product gets the most), so the board fills the screen
   const spare = Math.max(0, boardW - need.reduce((a, b) => a + b, 0));
   // spare width is spread over every column (product gets the most) so columns sit evenly apart
   const share = { PRODUCT: 3, MAKE: 1.5, 'SR NO.': 0.3 };
   const shareOf = d => share[d.h] ?? 1;
   const shareSum = cols2.reduce((a, d) => a + shareOf(d), 0) || 1;
-  const COLS = cols2.map((d, i) => `${Math.floor(need[i] + spare * shareOf(d) / shareSum)}px`).join(' ');
+  const COLW = cols2.map((d, i) => Math.floor(need[i] + spare * shareOf(d) / shareSum));
+  const COLS = COLW.map(w => `${w}px`).join(' ');
+  // Text too long for its column gets a smaller font (down to 55%), so it still shows in full where possible
+  const cellFs = (d, ci, text) => {
+   if (!isTextCol(d)) return undefined;
+   const w = tw2(text.replace(/\d/g, '0'), `${d.st?.fontWeight || 400} ${FS}px ${mono}`) * 1.03;
+   const room = COLW[ci] - PADX;
+   return w <= room ? undefined : Math.max(Math.round(FS * 0.55), Math.floor(FS * room / w * 2) / 2);
+  };
   const cell = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', padding: twoCols ? '0 5px' : '0 8px' };   // must stay below PADX/2 so measured widths are never cut
   // long text (product / make / coo / grade / pack) may wrap to 2 lines in 2-column mode
   const wrap = twoCols ? { whiteSpace: 'normal', lineHeight: 1.15, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflowWrap: 'break-word' } : {};
 
   return (
    <div style={{ position: 'fixed', inset: 0, background: '#04122b', zIndex: 1000, display: 'flex', flexDirection: 'column', fontFamily: "'Inter','Segoe UI',sans-serif" }}>
-    <TvTopBar height={HDR_H} date={date} live={rows2.length} countdown={countdown}
+    <TvTopBar height={HDR_H} date={date} live={rows2.length} countdown={countdown} textScale={tvScale} onTextScale={changeTvScale}
      page={cur2} pages={pages2} pageCountdown={tv2Countdown}
      progressPct={pages2 > 1 ? ((TV2_PAGE_SEC - tv2Countdown) / TV2_PAGE_SEC) * 100 : null}
      onPrev={() => { setTv2Page(p => (p - 1 + pages2) % pages2); setTv2Countdown(TV2_PAGE_SEC); }}
@@ -544,9 +592,10 @@ export default function AdminPricing() {
         const srNo = cur2 * perPage + ri + 1;   // continues across screens
         return (
          <div key={it.product._id} style={{ display: 'grid', gridTemplateColumns: COLS, height: ROW_H2, alignItems: 'center', background: ri % 2 ? '#0d3470' : '#0b2c62', borderTop: '1px solid rgba(147,197,253,0.12)', fontFamily: mono, fontSize: FS, fontWeight: 400, color: '#e0f2fe', fontVariantNumeric: 'tabular-nums' }}>
-          {cols2.map(d => (
-           <div key={d.h} title={d.h === 'PRODUCT' ? it.product.group : undefined}
+          {cols2.map((d, ci) => (
+           <div key={d.h} title={d.wrap ? String(d.get(it, srNo) || '') : undefined}
             style={{ ...cell, ...(d.wrap ? wrap : {}), textAlign: LEFT_COLS.has(d.h) ? 'left' : 'center', ...(d.st || {}),
+             ...(cellFs(d, ci, properCase(String(d.get(it, srNo) || '—'))) ? { fontSize: cellFs(d, ci, properCase(String(d.get(it, srNo) || '—'))) } : {}),
              ...(d.price ? { color: '#4ade80', fontWeight: 400, fontSize: FS + 2 } : {}),
              ...(d.date ? { color: isToday ? '#4ade80' : '#fbbf24' } : {}) }}>
             {d.get(it, srNo) ? properCase(String(d.get(it, srNo))) : <span style={{ color: 'rgba(147,197,253,0.35)' }}>—</span>}
